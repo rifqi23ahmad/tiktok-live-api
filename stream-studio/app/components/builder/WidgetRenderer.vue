@@ -7,6 +7,7 @@ import MiniGame from '~/components/widgets/MiniGame.vue'
 import PollPrediction from '~/components/widgets/PollPrediction.vue'
 import GiftLeaderboard from '~/components/widgets/GiftLeaderboard.vue'
 import ChatEffects from '~/components/widgets/ChatEffects.vue'
+import AvatarArena from '~/components/widgets/AvatarArena.vue'
 
 const props = defineProps<{ type: WidgetType; settings: Record<string, any> }>()
 
@@ -16,7 +17,8 @@ const map: Record<WidgetType, any> = {
   'mini-game': MiniGame,
   'poll-prediction': PollPrediction,
   'gift-leaderboard': GiftLeaderboard,
-  'chat-effects': ChatEffects
+  'chat-effects': ChatEffects,
+  'avatar-arena': AvatarArena
 }
 
 const comp = computed(() => map[props.type])

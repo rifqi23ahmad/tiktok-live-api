@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
-import type { GiftEvent, ChatEvent, LikeEvent, MemberEvent } from '~/utils/stream'
-import { uid } from '~/utils/stream'
+import type { GiftEvent, ChatEvent, LikeEvent, MemberEvent, FollowEvent } from '~/utils/stream'
+import { uid, normalizeUser, fallbackAvatar } from '~/utils/stream'
 
 export type StreamMode = 'idle' | 'live' | 'demo'
 
@@ -16,6 +16,7 @@ const gifts = ref<GiftEvent[]>([])
 const messages = ref<ChatEvent[]>([])
 const likes = ref<LikeEvent[]>([])
 const members = ref<MemberEvent[]>([])
+const follows = ref<FollowEvent[]>([])
 const battle = ref<any>(null)
 const battleArmies = ref<any>(null)
 const poll = ref<any>(null)
@@ -44,6 +45,8 @@ const totalLikes = computed(() => likes.value.reduce((sum, l) => sum + l.likeCou
 function pushGift(raw: any) {
   const d = raw?.data ?? raw
   const user: string = d?.user?.uniqueId || 'anon'
+  const nickname: string = d?.user?.nickname || user
+  const avatarUrl: string = normalizeUser(d?.user).avatarUrl || fallbackAvatar(user)
   const repeatCount = d?.repeatCount || 1
   const diamondCount = (d?.diamondCount || 0) * repeatCount
   if (diamondCount <= 0) return
@@ -51,6 +54,8 @@ function pushGift(raw: any) {
     {
       id: uid(),
       user,
+      nickname,
+      avatarUrl,
       giftName: d?.giftName || 'Gift',
       diamondCount,
       repeatCount,
@@ -62,25 +67,45 @@ function pushGift(raw: any) {
 
 function pushChat(raw: any) {
   const d = raw?.data ?? raw
+  const user: string = d?.user?.uniqueId || 'anon'
+  const nickname: string = d?.user?.nickname || user
+  const avatarUrl: string = normalizeUser(d?.user).avatarUrl || fallbackAvatar(user)
   messages.value = [
-    { id: uid(), user: d?.user?.uniqueId || 'anon', comment: d?.comment || '' },
+    { id: uid(), user, nickname, avatarUrl, comment: d?.comment || '' },
     ...messages.value
   ].slice(0, 200)
 }
 
 function pushLike(raw: any) {
   const d = raw?.data ?? raw
+  const user: string = d?.user?.uniqueId || 'anon'
+  const nickname: string = d?.user?.nickname || user
+  const avatarUrl: string = normalizeUser(d?.user).avatarUrl || fallbackAvatar(user)
   likes.value = [
-    { id: uid(), user: d?.user?.uniqueId || 'anon', likeCount: d?.likeCount || 1, totalLikes: d?.totalLikes || 0 },
+    { id: uid(), user, nickname, avatarUrl, likeCount: d?.likeCount || 1, totalLikes: d?.totalLikes || 0 },
     ...likes.value
   ].slice(0, 100)
 }
 
 function pushMember(raw: any) {
   const d = raw?.data ?? raw
+  const user: string = d?.user?.uniqueId || 'anon'
+  const nickname: string = d?.user?.nickname || user
+  const avatarUrl: string = normalizeUser(d?.user).avatarUrl || fallbackAvatar(user)
   members.value = [
-    { id: uid(), user: d?.user?.uniqueId || 'anon' },
+    { id: uid(), user, nickname, avatarUrl },
     ...members.value
+  ].slice(0, 50)
+}
+
+function pushFollow(raw: any) {
+  const d = raw?.data ?? raw
+  const user: string = d?.user?.uniqueId || 'anon'
+  const nickname: string = d?.user?.nickname || user
+  const avatarUrl: string = normalizeUser(d?.user).avatarUrl || fallbackAvatar(user)
+  follows.value = [
+    { id: uid(), user, nickname, avatarUrl },
+    ...follows.value
   ].slice(0, 50)
 }
 
@@ -102,6 +127,9 @@ function handleMessage(msg: any) {
       break
     case 'member':
       pushMember(msg)
+      break
+    case 'follow':
+      pushFollow(msg)
       break
     case 'roomUserSeq':
       viewers.value = msg.data?.viewerCount || 0
@@ -210,14 +238,16 @@ function startDemo() {
       const giftName = DEMO_GIFTS[Math.floor(Math.random() * DEMO_GIFTS.length)]
       const diamondCount = [1, 1, 1, 5, 10, 10, 20, 100, 500, 1500][Math.floor(Math.random() * 10)]
       const repeatCount = diamondCount <= 5 ? 1 + Math.floor(Math.random() * 5) : 1
-      pushGift({ user: { uniqueId: user }, giftName, diamondCount, repeatCount, repeatEnd: true })
+      pushGift({ user: { uniqueId: user, nickname: user }, giftName, diamondCount, repeatCount, repeatEnd: true })
     } else if (roll < 0.85) {
-      pushChat({ user: { uniqueId: user }, comment: DEMO_COMMENTS[Math.floor(Math.random() * DEMO_COMMENTS.length)] })
-    } else if (roll < 0.92) {
-      pushLike({ user: { uniqueId: user }, likeCount: 1 + Math.floor(Math.random() * 15) })
+      pushChat({ user: { uniqueId: user, nickname: user }, comment: DEMO_COMMENTS[Math.floor(Math.random() * DEMO_COMMENTS.length)] })
+    } else if (roll < 0.9) {
+      pushLike({ user: { uniqueId: user, nickname: user }, likeCount: 1 + Math.floor(Math.random() * 15) })
       viewers.value += Math.floor(Math.random() * 20) - 8
+    } else if (roll < 0.96) {
+      pushFollow({ user: { uniqueId: user, nickname: user } })
     } else {
-      pushMember({ user: { uniqueId: user } })
+      pushMember({ user: { uniqueId: user, nickname: user } })
     }
   }, 1100)
 }
@@ -240,6 +270,7 @@ function reset() {
   messages.value = []
   likes.value = []
   members.value = []
+  follows.value = []
   battle.value = null
   battleArmies.value = null
   poll.value = null
@@ -259,6 +290,7 @@ export function useTikTokStream() {
     messages,
     likes,
     members,
+    follows,
     battle,
     battleArmies,
     poll,

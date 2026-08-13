@@ -140,6 +140,16 @@ function setOption(idx: number, val: string) {
             Hype meter
           </label>
         </template>
+
+        <template v-else-if="inst.type === 'avatar-arena'">
+          <label class="mini-field">Mode
+            <select :value="inst.props.mode" @change="setProp('mode', ($event.target as HTMLSelectElement).value)">
+              <option value="arena">Audience Arena</option>
+              <option value="marble">Avatar Race</option>
+              <option value="war">Avatar War</option>
+            </select>
+          </label>
+        </template>
       </div>
     </template>
 

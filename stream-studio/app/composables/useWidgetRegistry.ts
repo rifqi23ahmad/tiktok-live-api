@@ -7,6 +7,7 @@ export type WidgetType =
   | 'poll-prediction'
   | 'gift-leaderboard'
   | 'chat-effects'
+  | 'avatar-arena'
 
 export interface WidgetDef {
   type: WidgetType
@@ -77,6 +78,15 @@ export const widgetDefs: WidgetDef[] = [
     defaultW: 60,
     defaultH: 34,
     defaultProps: { floatEmoji: true, rain: true, hype: true }
+  },
+  {
+    type: 'avatar-arena',
+    name: 'Viewer Characters (Avatar Arena)',
+    icon: '🫥',
+    description: 'Penonton yang join tampil sebagai karakter dari foto profilnya. Reaksi chat/like/gift/follow, plus Avatar Race & Avatar War.',
+    defaultW: 88,
+    defaultH: 48,
+    defaultProps: { mode: 'arena' as 'arena' | 'marble' | 'war' }
   }
 ]
 

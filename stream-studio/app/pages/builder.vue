@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import BuilderCanvasStage from '~/components/builder/CanvasStage.vue'
+import BuilderInspectorPanel from '~/components/builder/InspectorPanel.vue'
+import BuilderWidgetPalette from '~/components/builder/WidgetPalette.vue'
+
 definePageMeta({ layout: 'builder' })
 
 const { instances, loadClassicPreset } = useStudio()
@@ -12,9 +16,9 @@ onMounted(() => {
   <div class="builder-page">
     <BuilderToolbar />
     <div class="builder-body">
-      <WidgetPalette />
-      <CanvasStage />
-      <InspectorPanel />
+      <BuilderWidgetPalette />
+      <BuilderCanvasStage />
+      <BuilderInspectorPanel />
     </div>
   </div>
 </template>

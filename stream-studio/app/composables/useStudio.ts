@@ -85,7 +85,8 @@ function loadClassicPreset() {
     ['mini-game', 7, 34],
     ['gift-alert', 11, 46],
     ['poll-prediction', 10, 60],
-    ['chat-effects', 20, 72]
+    ['chat-effects', 20, 72],
+    ['avatar-arena', 6, 30]
   ]
   for (const [type, x, y] of plan) addWidget(type, x, y)
   selectedId.value = null
