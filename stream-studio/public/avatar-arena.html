@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TikTok Live Avatar Arena — Viewer Characters</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --ink: oklch(98% 0.01 90);
+  --ink-dim: oklch(80% 0.02 90);
+  --ink-faint: oklch(70% 0.02 90);
+  --panel: oklch(15% 0.02 280 / 0.72);
+  --panel-edge: oklch(60% 0.05 280 / 0.35);
+  --accent: oklch(75% 0.19 350);        /* TikTok pink-magenta */
+  --accent2: oklch(82% 0.15 195);       /* TikTok cyan */
+  --gold: oklch(85% 0.16 90);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; font-family: var(--font-display); color: var(--ink); }
+
+#stage { position: fixed; inset: 0; display: none; flex-direction: column; padding: 2.5vw; }
+
+/* ---------- HUD ---------- */
+#hud { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2vw; }
+#hud .title { font-size: 4vw; font-weight: 700; }
+#hud .title small { display: block; font-size: 2vw; font-weight: 500; color: var(--ink-dim); letter-spacing: 0.08em; text-transform: uppercase; }
+#hud .count { font-family: var(--font-mono); font-size: 3vw; font-weight: 700; color: var(--accent2); text-align: right; }
+#hud .count .lbl { display: block; font-family: var(--font-display); font-size: 1.8vw; color: var(--ink-dim); letter-spacing: 0.08em; }
+
+/* ---------- ARENA ---------- */
+#arena { flex: 1; position: relative; min-height: 0; display: flex; flex-wrap: wrap; align-content: flex-start; justify-content: center; gap: 2vw; overflow-y: auto; padding-bottom: 2vw; }
+
+.char { position: relative; width: 15vw; display: flex; flex-direction: column; align-items: center; animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes popIn { from { opacity: 0; transform: translateY(4vw) scale(0.4); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.char .wrap { position: relative; width: 10vw; height: 10vw; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.char img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 0.5vw solid var(--accent2); background: oklch(25% 0.03 280); box-shadow: 0 0 2vw oklch(0% 0 0 / 0.5); display: block; }
+.char .nameplate { margin-top: 0.8vw; max-width: 100%; font-size: 2vw; font-weight: 700; background: oklch(20% 0.03 280 / 0.85); border-radius: 999px; padding: 0.4vw 1.2vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.char .bubble { position: absolute; top: -7vw; left: 50%; transform: translateX(-50%); background: #fff; color: #111; font-size: 2.2vw; font-weight: 600; padding: 0.8vw 1.6vw; border-radius: 1.6vw; max-width: 24vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 0.5vw 2vw oklch(0% 0 0 / 0.5); z-index: 6; animation: bubbleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.char .bubble::after { content: ''; position: absolute; bottom: -0.8vw; left: 50%; transform: translateX(-50%); border: 0.8vw solid transparent; border-top-color: #fff; }
+@keyframes bubbleIn { from { opacity: 0; transform: translateX(-50%) scale(0.5); } to { opacity: 1; transform: translateX(-50%) scale(1); } }
+.char .crown { position: absolute; top: -4vw; left: 50%; transform: translateX(-50%); font-size: 4.5vw; z-index: 5; animation: crownDrop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes crownDrop { from { transform: translateX(-50%) translateY(-3vw) scale(0.4); } to { transform: translateX(-50%) translateY(0) scale(1); } }
+.char .confetti { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+.char .cf { position: absolute; top: 0; left: 50%; font-size: 2.4vw; animation: confetti 1.4s ease-out forwards; animation-delay: calc(var(--i) * 0.05s); }
+@keyframes confetti { from { transform: translate(0,0) scale(1); opacity: 1; } to { transform: translate(calc((var(--i) - 4) * 2.6vw), calc(var(--i) * 1.2vw)) rotate(calc((var(--i) - 4) * 60deg)); opacity: 0; } }
+.char .hearts { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+.char .ht { position: absolute; bottom: 0; left: 50%; font-size: 2.6vw; animation: heartUp 1.6s ease-out forwards; animation-delay: calc(var(--i) * 0.09s); }
+@keyframes heartUp { from { transform: translateX(-50%) translateY(0) scale(0.5); opacity: 1; } to { transform: translateX(calc((var(--i) - 3) * 2.2vw)) translateY(-8vw) scale(1.3); opacity: 0; } }
+.char .follow { position: absolute; top: -3vw; left: 50%; transform: translateX(-50%); background: var(--accent); color: #fff; font-size: 2vw; font-weight: 700; padding: 0.5vw 1.4vw; border-radius: 999px; z-index: 5; white-space: nowrap; animation: bubbleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+#empty { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; color: var(--ink-dim); font-size: 3.4vw; }
+#empty .ico { font-size: 9vw; margin-bottom: 1.4vw; }
+
+/* ---------- MARBLE RACE ---------- */
+#marble { flex: 1; position: relative; display: none; flex-direction: column; justify-content: center; gap: 1.4vw; }
+#marble .track { position: relative; height: 6vw; border-radius: 999px; background: oklch(28% 0.03 280 / 0.8); border: 1px solid var(--panel-edge); }
+#marble .racer { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 6.5vw; height: 6.5vw; transition: left 0.5s cubic-bezier(0.22, 1, 0.36, 1); z-index: 2; }
+#marble .racer img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 0.4vw solid var(--accent2); background: oklch(25% 0.03 280); display: block; }
+#marble .lane-name { font-size: 2vw; color: var(--ink-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#marble .flag { position: absolute; top: 50%; right: 0.5vw; transform: translateY(-50%); font-size: 4.5vw; }
+#marble .win { text-align: center; font-size: 3.4vw; font-weight: 700; color: var(--gold); }
+
+/* ---------- AVATAR WAR ---------- */
+#war { flex: 1; position: relative; display: none; flex-direction: column; justify-content: center; gap: 1.2vw; }
+#war .side { display: flex; flex-direction: column; gap: 0.6vw; }
+#war .avatars { display: flex; gap: 0.8vw; align-items: center; min-height: 5.5vw; }
+#war .avatars img { width: 5vw; height: 5vw; border-radius: 50%; object-fit: cover; background: oklch(25% 0.03 280); display: block; }
+#war .avatars img.a { border: 0.3vw solid oklch(70% 0.2 25); }
+#war .avatars img.b { border: 0.3vw solid oklch(70% 0.17 230); }
+#war .avatars .ph { width: 5vw; height: 5vw; border-radius: 50%; display: grid; place-items: center; font-weight: 700; color: #fff; }
+#war .avatars .ph.a { background: oklch(55% 0.15 25); }
+#war .avatars .ph.b { background: oklch(55% 0.14 230); }
+#war .row { display: flex; justify-content: space-between; align-items: baseline; font-size: 3vw; }
+#war .row .team { font-weight: 700; }
+#war .row .val { font-family: var(--font-mono); color: var(--gold); }
+#war .bar { display: flex; height: 5vw; border-radius: 999px; overflow: hidden; }
+#war .bar .a { background: linear-gradient(90deg, oklch(70% 0.2 25), oklch(75% 0.19 350)); transition: width 0.5s; }
+#war .bar .b { background: linear-gradient(90deg, oklch(70% 0.17 230), oklch(82% 0.15 195)); transition: width 0.5s; }
+#war .lead { text-align: center; font-size: 3vw; font-weight: 700; color: var(--accent2); }
+
+/* status pill */
+#status { position: absolute; top: 1.2%; right: 2.5vw; font-family: var(--font-mono); font-size: 1.8vw; color: var(--ink-dim); background: var(--panel); border-radius: 999px; padding: 0.5vw 1.5vw; display: flex; align-items: center; gap: 0.8vw; z-index: 20; }
+#status .dot { width: 1.2vw; height: 1.2vw; border-radius: 50%; background: oklch(65% 0.2 25); }
+#status.on .dot { background: oklch(75% 0.18 150); }
+
+/* demo panel */
+#demo-panel { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; width: 96vw; z-index: 30; }
+#demo-panel button { padding: 8px 12px; border-radius: 8px; border: 0; background: var(--accent); color: #fff; font-weight: 700; font-size: 12px; cursor: pointer; }
+#demo-panel button.alt { background: var(--accent2); color: #000; }
+#demo-panel button.ghost { background: oklch(30% 0.02 280); color: var(--ink); }
+
+/* setup screen */
+#setup { position: fixed; inset: 0; display: grid; place-items: center; background: oklch(15% 0.02 280); padding: 24px; }
+#setup .card { max-width: 560px; font-size: 15px; line-height: 1.7; }
+#setup h1 { font-size: 22px; margin-bottom: 12px; }
+#setup code { font-family: var(--font-mono); font-size: 13px; background: oklch(25% 0.03 280); padding: 2px 6px; border-radius: 6px; color: var(--accent2); overflow-wrap: anywhere; }
+#setup button { margin-top: 14px; padding: 10px 16px; border-radius: 8px; border: 0; background: var(--accent); color: #fff; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div id="setup">
+  <div class="card">
+    <h1>👥 Avatar Arena — Viewer Characters</h1>
+    <p>Penonton yang join tampil sebagai karakter dari foto profilnya. Buka dengan parameter URL:</p>
+    <p><code>avatar-arena.html?username=USERNAME&apiKey=API_KEY</code></p>
+    <p>Mode: <code>&mode=arena</code> (default), <code>&mode=marble</code> (Avatar Race), <code>&mode=war</code> (Avatar War).</p>
+    <p style="margin-top:12px">Tanpa parameter (atau <code>apiKey=demo</code>) overlay berjalan dalam <b>mode simulasi</b> dengan tombol demo di bawah.</p>
+    <button onclick="enterDemo()">▶ Buka Demo</button>
+  </div>
+</div>
+
+<div id="stage">
+  <div id="hud">
+    <div class="title"><span id="hud-title">👥 Audience Arena</span><small id="hud-sub">penonton = karakter dari foto profil</small></div>
+    <div class="count"><span id="hud-count">0 penonton</span><span class="lbl">JOIN → KARAKTER</span></div>
+  </div>
+
+  <div id="arena"></div>
+
+  <div id="marble"></div>
+
+  <div id="war"></div>
+
+  <div id="status"><span class="dot"></span><span id="status-text">connecting…</span></div>
+
+  <div id="demo-panel">
+    <button onclick="demoMember()">👋 Join</button>
+    <button class="alt" onclick="demoChat()">💬 Chat</button>
+    <button class="alt" onclick="demoLike()">❤️ Like</button>
+    <button onclick="demoGift(20)">🎁 Gift kecil</button>
+    <button onclick="demoGift(1500)">👑 Gift SULTAN</button>
+    <button class="alt" onclick="demoFollow()">➕ Follow</button>
+    <button class="ghost" onclick="setMode(MODE === 'arena' ? 'marble' : MODE === 'marble' ? 'war' : 'arena')">⇄ Ganti mode</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const qs = new URLSearchParams(location.search);
+  const USERNAME = qs.get('username');
+  const API_KEY = qs.get('apiKey');
+  const hasCreds = !!USERNAME && !!API_KEY && API_KEY !== 'demo';
+  const DEMO = !hasCreds || qs.get('demo') === '1';
+  let MODE = (qs.get('mode') === 'marble' || qs.get('mode') === 'war') ? qs.get('mode') : 'arena';
+
+  const $ = (id) => document.getElementById(id);
+  const el = {
+    stage: $('stage'), setup: $('setup'), demo: $('demo-panel'),
+    arena: $('arena'), marble: $('marble'), war: $('war'),
+    hudTitle: $('hud-title'), hudSub: $('hud-sub'), hudCount: $('hud-count'),
+    status: $('status'), statusText: $('status-text')
+  };
+
+  const MAX_CHARS = 12;
+  const chars = new Map(); // key -> { el, wrap, img, bubble, hearts, crown, confetti, follow, timers }
+  const timers = new Map();
+
+  function clearTimers(key) {
+    const t = timers.get(key);
+    if (t) { clearTimeout(t); timers.delete(key); }
+  }
+
+  // ---------------------------------------------------------------------
+  // avatar extraction (same shape logic as the builder)
+  // ---------------------------------------------------------------------
+  const PALETTE = ['#ff6b6b', '#fca311', '#06d6a0', '#118ab2', '#8338ec', '#ff70a6', '#f4a261', '#2a9d8f'];
+  function hashStr(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); }
+  function fallbackAvatar(name) {
+    const seed = (name || 'anon').trim() || 'anon';
+    const bg = PALETTE[hashStr(seed) % PALETTE.length];
+    const initial = seed.charAt(0).toUpperCase();
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96'><rect width='96' height='96' rx='48' fill='${bg}'/><text x='48' y='60' font-family='Arial,sans-serif' font-size='42' font-weight='700' fill='#fff' text-anchor='middle'>${initial}</text></svg>`;
+    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+  }
+  function avatarUrlFrom(user) {
+    if (!user || typeof user !== 'object') return '';
+    for (const c of [user.profilePictureUrl, user.avatarUrl, user.avatar]) {
+      if (typeof c === 'string' && c) return c;
+      if (c && Array.isArray(c.urlList) && c.urlList[0]) return c.urlList[0];
+    }
+    const thumb = user.avatarThumb;
+    if (thumb && Array.isArray(thumb.urlList) && thumb.urlList[0]) return thumb.urlList[0];
+    if (typeof thumb === 'string' && thumb) return thumb;
+    return '';
+  }
+  function userInfo(d) {
+    const u = d && d.user ? d.user : {};
+    const user = u.uniqueId || d.uniqueId || 'anon';
+    const nickname = u.nickname || u.uniqueId || user || 'anon';
+    const avatarUrl = avatarUrlFrom(u) || fallbackAvatar(user);
+    return { user, nickname, avatarUrl };
+  }
+
+  // ---------------------------------------------------------------------
+  // arena render
+  // ---------------------------------------------------------------------
+  function ensureChar(user, nickname, avatarUrl) {
+    const key = user || 'anon';
+    let c = chars.get(key);
+    if (c) {
+      c.img.src = avatarUrl || c.img.src;
+      const nm = nickname || user || 'anon';
+      c.nameplate.textContent = '@' + nm;
+      return c;
+    }
+    const root = document.createElement('div');
+    root.className = 'char';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'wrap';
+
+    const img = document.createElement('img');
+    img.src = avatarUrl;
+    img.alt = nickname || user || 'anon';
+
+    const nameplate = document.createElement('div');
+    nameplate.className = 'nameplate';
+    nameplate.textContent = '@' + (nickname || user || 'anon');
+
+    wrap.appendChild(img);
+    root.appendChild(wrap);
+    root.appendChild(nameplate);
+
+    c = { root, wrap, img, nameplate, bubble: null, hearts: null, crown: null, confetti: null, follow: null, rootKey: key };
+    chars.set(key, c);
+    el.arena.appendChild(root);
+
+    if (chars.size > MAX_CHARS) {
+      const oldest = chars.keys().next().value;
+      removeChar(oldest);
+    }
+    renderCount();
+    return c;
+  }
+
+  function removeChar(key) {
+    const c = chars.get(key);
+    if (!c) return;
+    clearTimers(key);
+    c.root.remove();
+    chars.delete(key);
+    renderCount();
+  }
+
+  function renderCount() {
+    el.hudCount.textContent = chars.size + ' penonton';
+  }
+
+  function showBubble(c, text) {
+    if (!c.bubble) {
+      c.bubble = document.createElement('div');
+      c.bubble.className = 'bubble';
+      c.root.appendChild(c.bubble);
+    }
+    c.bubble.textContent = text;
+    clearTimers(c.rootKey);
+    timers.set(c.rootKey, setTimeout(() => { if (c.bubble) c.bubble.remove(); c.bubble = null; }, 3200));
+  }
+
+  function showHearts(c, n) {
+    if (c.hearts) c.hearts.remove();
+    c.hearts = document.createElement('div');
+    c.hearts.className = 'hearts';
+    for (let i = 0; i < n; i++) {
+      const s = document.createElement('span');
+      s.className = 'ht';
+      s.style.setProperty('--i', i);
+      s.textContent = '❤️';
+      c.hearts.appendChild(s);
+    }
+    c.wrap.appendChild(c.hearts);
+    clearTimers(c.rootKey);
+    timers.set(c.rootKey, setTimeout(() => { if (c.hearts) c.hearts.remove(); c.hearts = null; }, 2400));
+  }
+
+  function showCrown(c, confetti) {
+    if (!c.crown) {
+      c.crown = document.createElement('div');
+      c.crown.className = 'crown';
+      c.crown.textContent = '👑';
+      c.wrap.appendChild(c.crown);
+    }
+    if (confetti) {
+      if (c.confetti) c.confetti.remove();
+      c.confetti = document.createElement('div');
+      c.confetti.className = 'confetti';
+      for (let i = 0; i < 8; i++) {
+        const s = document.createElement('span');
+        s.className = 'cf';
+        s.style.setProperty('--i', i);
+        s.textContent = '🎊';
+        c.confetti.appendChild(s);
+      }
+      c.wrap.appendChild(c.confetti);
+    }
+  }
+
+  function hideCrown(c) {
+    if (c.crown) { c.crown.remove(); c.crown = null; }
+    if (c.confetti) { c.confetti.remove(); c.confetti = null; }
+    c.wrap.style.transform = 'scale(1)';
+  }
+
+  function showFollow(c) {
+    if (c.follow) c.follow.remove();
+    c.follow = document.createElement('div');
+    c.follow.className = 'follow';
+    c.follow.textContent = '➕ FOLLOW';
+    c.wrap.appendChild(c.follow);
+    clearTimers(c.rootKey);
+    timers.set(c.rootKey, setTimeout(() => { if (c.follow) c.follow.remove(); c.follow = null; }, 4200));
+  }
+
+  function onMember(d) {
+    const { user, nickname, avatarUrl } = userInfo(d);
+    ensureChar(user, nickname, avatarUrl);
+  }
+  function onChat(d) {
+    const { user, nickname, avatarUrl } = userInfo(d);
+    const c = ensureChar(user, nickname, avatarUrl);
+    const text = ((d && d.comment) || '').trim().slice(0, 60);
+    if (text) showBubble(c, text);
+  }
+  function onLike(d) {
+    const { user, nickname, avatarUrl } = userInfo(d);
+    const c = ensureChar(user, nickname, avatarUrl);
+    showHearts(c, Math.min(12, Math.min((d && d.likeCount) || 1, 6)));
+  }
+  function onGift(d) {
+    const { user, nickname, avatarUrl } = userInfo(d);
+    const c = ensureChar(user, nickname, avatarUrl);
+    const diamonds = (d && d.diamondCount) || 1;
+    const big = diamonds >= 100;
+    c.wrap.style.transform = 'scale(' + (big ? 1.6 : 1.25) + ')';
+    showCrown(c, big);
+    clearTimers(c.rootKey);
+    timers.set(c.rootKey, setTimeout(() => hideCrown(c), big ? 5000 : 2600));
+    if (MODE === 'marble') advanceMarble();
+    if (MODE === 'war') updateWar(d);
+  }
+  function onFollow(d) {
+    const { user, nickname, avatarUrl } = userInfo(d);
+    const c = ensureChar(user, nickname, avatarUrl);
+    showFollow(c);
+  }
+
+  // ---------------------------------------------------------------------
+  // marble race (avatar race)
+  // ---------------------------------------------------------------------
+  const LANES = 4;
+  let racers = [];
+  let raceWinner = null;
+
+  function defaultRacers() {
+    return Array.from({ length: LANES }, (_, i) => ({ user: '', nickname: 'Racer ' + (i + 1), avatarUrl: fallbackAvatar('Racer ' + (i + 1)), pos: 0 }));
+  }
+  function buildMarble() {
+    el.marble.innerHTML = '';
+    racers.forEach((r, i) => {
+      const track = document.createElement('div');
+      track.className = 'track';
+      const racer = document.createElement('div');
+      racer.className = 'racer';
+      racer.style.left = r.pos + '%';
+      const img = document.createElement('img');
+      img.src = r.avatarUrl;
+      img.alt = r.nickname;
+      racer.appendChild(img);
+      const flag = document.createElement('div');
+      flag.className = 'flag';
+      flag.textContent = '🏁';
+      track.appendChild(racer);
+      track.appendChild(flag);
+      const name = document.createElement('div');
+      name.className = 'lane-name';
+      name.textContent = '@' + r.nickname;
+      el.marble.appendChild(track);
+      el.marble.appendChild(name);
+      racer.dataset.lane = i;
+      racers[i].node = racer;
+      racers[i].img = img;
+    });
+  }
+  function roster() {
+    return [...chars.values()].slice(0, LANES).map((c) => {
+      const name = (c.nameplate.textContent || '').replace(/^@/, '');
+      return { user: name, nickname: name, avatarUrl: c.img.src, pos: 0 };
+    });
+  }
+  function refreshRacers() {
+    const r = roster();
+    const next = defaultRacers();
+    for (let i = 0; i < LANES; i++) if (r[i]) next[i] = { ...r[i], pos: racers[i] && racers[i].pos ? racers[i].pos : 0 };
+    racers = next;
+    buildMarble();
+  }
+  function advanceMarble() {
+    if (raceWinner !== null) return;
+    const i = Math.floor(Math.random() * LANES);
+    const r = racers[i];
+    r.pos = Math.min(100, r.pos + 2 + Math.random() * 9);
+    if (r.node) r.node.style.left = r.pos + '%';
+    if (r.pos >= 100 && r.user) {
+      raceWinner = r.user;
+      el.marble.insertAdjacentHTML('beforeend', '<div class="win">🏆 @' + escapeHtml(r.user) + ' menang!</div>');
+      setTimeout(() => { racers = defaultRacers(); raceWinner = null; buildMarble(); }, 4000);
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // avatar war
+  // ---------------------------------------------------------------------
+  const warState = { a: 0, b: 0, rosterA: new Map(), rosterB: new Map() };
+  function buildWar() {
+    el.war.innerHTML = '';
+    const mkSide = (side, label, cls) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'side';
+      const avatars = document.createElement('div');
+      avatars.className = 'avatars';
+      avatars.id = 'war-avatars-' + side;
+      wrap.appendChild(avatars);
+      const row = document.createElement('div');
+      row.className = 'row';
+      const team = document.createElement('span');
+      team.className = 'team';
+      team.textContent = label;
+      const val = document.createElement('span');
+      val.className = 'val';
+      val.id = 'war-val-' + side;
+      val.textContent = '0 💎';
+      row.appendChild(team);
+      row.appendChild(val);
+      wrap.appendChild(row);
+      el.war.appendChild(wrap);
+      return { avatars, val };
+    };
+    el.warSideA = mkSide('a', '🔴 Kubu Merah');
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    const fa = document.createElement('div');
+    fa.className = 'a';
+    fa.id = 'war-fill-a';
+    fa.style.width = '50%';
+    const fb = document.createElement('div');
+    fb.className = 'b';
+    fb.id = 'war-fill-b';
+    fb.style.width = '50%';
+    bar.appendChild(fa);
+    bar.appendChild(fb);
+    el.war.appendChild(bar);
+    el.warSideB = mkSide('b', '🔵 Kubu Biru');
+    const lead = document.createElement('div');
+    lead.className = 'lead';
+    lead.id = 'war-lead';
+    lead.textContent = 'Imbang!';
+    el.war.appendChild(lead);
+  }
+  function updateWar(d) {
+    const { user, nickname, avatarUrl } = userInfo(d);
+    const diamonds = (d && d.diamondCount) || 1;
+    const side = hashStr(user) % 2 === 0 ? 'a' : 'b';
+    if (side === 'a') {
+      warState.a += diamonds;
+      if (!warState.rosterA.has(user)) { warState.rosterA.set(user, { nickname, avatarUrl }); addWarAvatar('a', user, avatarUrl); }
+    } else {
+      warState.b += diamonds;
+      if (!warState.rosterB.has(user)) { warState.rosterB.set(user, { nickname, avatarUrl }); addWarAvatar('b', user, avatarUrl); }
+    }
+    const total = warState.a + warState.b;
+    const pctA = total > 0 ? (warState.a / total) * 100 : 50;
+    const fa = $('war-fill-a'); if (fa) fa.style.width = pctA + '%';
+    const fb = $('war-fill-b'); if (fb) fb.style.width = (100 - pctA) + '%';
+    const va = $('war-val-a'); if (va) va.textContent = warState.a.toLocaleString('id-ID') + ' 💎';
+    const vb = $('war-val-b'); if (vb) vb.textContent = warState.b.toLocaleString('id-ID') + ' 💎';
+    const lead = $('war-lead'); if (lead) lead.textContent = warState.a === warState.b ? 'Imbang!' : warState.a > warState.b ? 'Kubu Merah unggul' : 'Kubu Biru unggul';
+  }
+  function addWarAvatar(side, user, avatarUrl) {
+    const host = side === 'a' ? el.warSideA.avatars : el.warSideB.avatars;
+    if (!host) return;
+    const existing = host.querySelector('.ph');
+    if (existing) existing.remove();
+    const img = document.createElement('img');
+    img.className = side;
+    img.src = avatarUrl;
+    img.alt = user;
+    host.appendChild(img);
+    if (host.children.length > 5) host.firstElementChild.remove();
+  }
+
+  // ---------------------------------------------------------------------
+  // mode switching
+  // ---------------------------------------------------------------------
+  function setMode(m) {
+    MODE = m;
+    el.arena.style.display = m === 'arena' ? 'flex' : 'none';
+    el.marble.style.display = m === 'marble' ? 'flex' : 'none';
+    el.war.style.display = m === 'war' ? 'flex' : 'none';
+    el.hudTitle.textContent = m === 'marble' ? '🏁 Avatar Race' : m === 'war' ? '⚔️ Avatar War' : '👥 Audience Arena';
+    el.hudSub.textContent = m === 'marble' ? 'gift = dorong avatar-mu' : m === 'war' ? 'gift = isi kubu' : 'penonton = karakter dari foto profil';
+    if (m === 'marble') refreshRacers();
+    if (m === 'war') buildWar();
+  }
+
+  // ---------------------------------------------------------------------
+  // websocket (live mode)
+  // ---------------------------------------------------------------------
+  function handleMessage(evt) {
+    let msg; try { msg = JSON.parse(evt.data); } catch { return; }
+    const d = msg.data || {};
+    switch (msg.event) {
+      case 'member': onMember(d); break;
+      case 'chat': onChat(d); break;
+      case 'like': onLike(d); break;
+      case 'gift':
+        if (d.giftType === 1 && !d.repeatEnd) break;
+        onGift(d);
+        break;
+      case 'follow': onFollow(d); break;
+      default: break;
+    }
+  }
+
+  function connect() {
+    el.statusText.textContent = 'connecting…';
+    const ws = new WebSocket(`wss://api.tik.tools?uniqueId=${encodeURIComponent(USERNAME)}&apiKey=${encodeURIComponent(API_KEY)}`);
+    let retry = 0;
+    ws.onopen = () => { retry = 0; el.status.classList.add('on'); el.statusText.textContent = '@' + USERNAME; };
+    ws.onmessage = handleMessage;
+    ws.onclose = () => { el.status.classList.remove('on'); el.statusText.textContent = 'reconnecting…'; setTimeout(connect, Math.min(30000, 1000 * 2 ** retry++)); };
+  }
+
+  // ---------------------------------------------------------------------
+  // demo controls
+  // ---------------------------------------------------------------------
+  const DEMO_NAMES = ['rizky_99', 'bunga.batch', 'dimasGokil', 'sitiGemoy', 'bang_tirex', 'mawar.mei', 'udin_petot', 'kepo.kw'];
+  const DEMO_COMMENTS = ['gas gas gas 🔥', 'wkwkwk 🤣', 'love you ❤️', 'mantap keren goks', 'salam dari jakarta 👋', 'hujan hujan 🌧️'];
+  const rnd = () => Math.floor(Math.random() * DEMO_NAMES.length);
+  function demoUser() {
+    const name = DEMO_NAMES[rnd()];
+    return { user: { uniqueId: name, nickname: name } };
+  }
+  function demoMember() { onMember(demoUser()); }
+  function demoChat() { onChat({ user: demoUser().user, comment: DEMO_COMMENTS[rnd()] }); }
+  function demoLike() { onLike({ user: demoUser().user, likeCount: 1 + Math.floor(Math.random() * 6) }); }
+  function demoGift(d) { onGift({ user: demoUser().user, diamondCount: d, repeatCount: 1, repeatEnd: true }); }
+  function demoFollow() { onFollow(demoUser()); }
+  window.demoMember = demoMember;
+  window.demoChat = demoChat;
+  window.demoLike = demoLike;
+  window.demoGift = demoGift;
+  window.demoFollow = demoFollow;
+  window.setMode = setMode;
+  window.enterDemo = () => start({ demo: true });
+
+  let demoAuto = null;
+  function start({ demo } = {}) {
+    const isDemo = demo === true || DEMO;
+    el.setup.style.display = 'none';
+    el.stage.style.display = 'flex';
+    el.demo.style.display = isDemo ? 'flex' : 'none';
+    setMode(MODE);
+    if (isDemo) {
+      el.status.classList.add('on');
+      el.statusText.textContent = 'DEMO MODE';
+      let n = 0;
+      demoAuto = setInterval(() => {
+        const roll = Math.random();
+        if (roll < 0.35) demoGift([1, 1, 5, 20, 100, 1500][Math.floor(Math.random() * 6)]);
+        else if (roll < 0.7) demoChat();
+        else if (roll < 0.85) demoLike();
+        else if (roll < 0.93) demoFollow();
+        else demoMember();
+        if (++n > 200) clearInterval(demoAuto);
+      }, 900);
+    } else {
+      connect();
+    }
+  }
+
+  function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+  if (hasCreds) start({ demo: false });
+  else if (qs.get('demo') === '1') start({ demo: true });
+  // otherwise stay on setup screen; button opens demo
+})();
+</script>
+</body>
+</html>

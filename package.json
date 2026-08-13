@@ -19,6 +19,7 @@
   ],
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+    "dev": "npm --prefix stream-studio run dev",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
