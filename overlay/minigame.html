@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TikTok Live Mini-Game — Marble Race + Gift War</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --ink: oklch(98% 0.01 90);
+  --ink-dim: oklch(80% 0.02 90);
+  --panel: oklch(15% 0.02 280 / 0.72);
+  --panel-edge: oklch(60% 0.05 280 / 0.35);
+  --accent: oklch(75% 0.19 350);
+  --accent2: oklch(82% 0.15 195);
+  --gold: oklch(85% 0.16 90);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; font-family: var(--font-display); color: var(--ink); }
+
+#stage { position: fixed; inset: 0; display: none; flex-direction: column; }
+
+/* ---------- HUD ---------- */
+#hud { display: flex; align-items: center; justify-content: space-between; padding: 3vw 4vw 0; }
+#hud .title { font-size: 4.4vw; font-weight: 700; letter-spacing: 0.02em; }
+#hud .title small { display: block; font-size: 2.2vw; font-weight: 500; color: var(--ink-dim); letter-spacing: 0.08em; text-transform: uppercase; }
+#hud .timer { font-family: var(--font-mono); font-size: 3.4vw; font-weight: 700; color: var(--accent2); text-align: right; }
+#hud .timer .lbl { display: block; font-family: var(--font-display); font-size: 1.9vw; font-weight: 500; color: var(--ink-dim); letter-spacing: 0.08em; }
+
+/* ---------- ARENA ---------- */
+.arena { flex: 1; position: relative; margin: 3vw 4vw; }
+
+/* marble race */
+#arena-marble { display: flex; gap: 3vw; }
+#track { flex: 1; position: relative; display: flex; gap: 1vw; background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 2vw; padding: 1.5vw; backdrop-filter: blur(12px); }
+.lane { flex: 1; position: relative; border-left: 1px dashed oklch(40% 0.03 280 / 0.5); border-right: 1px dashed oklch(40% 0.03 280 / 0.5); }
+.lane .lane-num { position: absolute; top: 0.6vw; left: 50%; transform: translateX(-50%); font-family: var(--font-mono); font-size: 1.8vw; color: var(--ink-dim); }
+.marble { position: absolute; left: 50%; transform: translateX(-50%); border-radius: 50%; display: grid; place-items: center; font-weight: 700; text-shadow: 0 1px 3px oklch(0% 0 0 / 0.6); transition: filter 200ms; }
+.marble .tag { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); font-size: 1.7vw; white-space: nowrap; font-weight: 500; }
+#finish { position: absolute; left: 0; right: 0; bottom: 8%; height: 0.6vw; background: repeating-linear-gradient(90deg, #fff 0 2vw, transparent 2vw 3vw); opacity: 0.85; }
+#finish-lbl { position: absolute; right: 0.5vw; bottom: 9.5%; font-size: 1.7vw; color: var(--gold); font-weight: 700; letter-spacing: 0.1em; }
+#m-standings { width: 30vw; background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 2vw; padding: 1.5vw; backdrop-filter: blur(12px); overflow: hidden; }
+#m-standings h3 { font-size: 2vw; color: var(--accent2); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1vw; }
+#m-standings ol { list-style: none; display: flex; flex-direction: column; gap: 0.8vw; }
+#m-standings li { display: flex; align-items: center; gap: 1vw; font-size: 2.1vw; }
+#m-standings li .dot { width: 2.2vw; height: 2.2vw; border-radius: 50%; flex-shrink: 0; }
+#m-standings li .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#m-standings li .d { font-family: var(--font-mono); color: var(--gold); font-size: 1.9vw; }
+
+/* gift war */
+#arena-war { display: flex; align-items: stretch; gap: 3vw; }
+.war-team { flex: 1; background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 2vw; padding: 2vw; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; backdrop-filter: blur(12px); }
+.war-team .emoji { font-size: 9vw; line-height: 1; }
+.war-team .name { font-size: 3.6vw; font-weight: 700; letter-spacing: 0.06em; margin-top: 1vw; }
+.war-team .score { font-family: var(--font-mono); font-size: 6vw; font-weight: 700; margin-top: 0.6vw; }
+.war-team .score .unit { font-size: 2.4vw; color: var(--ink-dim); }
+.war-team .mvp { font-size: 2vw; color: var(--ink-dim); margin-top: 1.4vw; }
+.war-team .mvp b { color: var(--gold); }
+.war-team.win { border-color: var(--gold); box-shadow: 0 0 3vw oklch(85% 0.16 90 / 0.5); }
+#war-mid { width: 34vw; display: flex; flex-direction: column; justify-content: center; gap: 2vw; }
+#war-mid .vs { text-align: center; font-size: 3vw; font-weight: 700; color: var(--ink-dim); letter-spacing: 0.2em; }
+#rope { height: 3vw; display: flex; align-items: center; position: relative; }
+#rope .half { flex: 1; height: 2vw; display: flex; }
+#rope .half.red { justify-content: flex-end; }
+#rope .half.blue { justify-content: flex-start; }
+#rope .half.red .fill { background: var(--merah, #ff4d6d); border-radius: 1vw 0 0 1vw; }
+#rope .half.blue .fill { background: var(--biru, #4dd8ff); border-radius: 0 1vw 1vw 0; }
+#rope .fill { height: 100%; transition: width 300ms cubic-bezier(0.22, 1, 0.36, 1); }
+#rope-knot { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 2vw; height: 2vw; background: #fff; border-radius: 50%; box-shadow: 0 0 1.5vw oklch(100% 0 0 / 0.8); }
+
+/* banner (countdown / winner) */
+#banner { position: absolute; top: 42%; left: 50%; transform: translate(-50%, -50%) scale(0.7); opacity: 0; pointer-events: none; text-align: center; width: 90vw; z-index: 10; }
+#banner.show { animation: banIn 400ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+@keyframes banIn { to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+#banner .num { font-family: var(--font-mono); font-size: 16vw; font-weight: 700; color: var(--accent2); text-shadow: 0 0 4vw oklch(82% 0.15 195 / 0.6); }
+#banner .head { font-size: 7vw; font-weight: 700; color: var(--gold); text-shadow: 0 2px 12px oklch(0% 0 0 / 0.8); }
+#banner .sub { font-size: 3.4vw; color: var(--ink); text-shadow: 0 2px 8px oklch(0% 0 0 / 0.9); margin-top: 1vw; }
+
+#howto { position: absolute; bottom: 3vw; left: 50%; transform: translateX(-50%); width: 86vw; background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 1.6vw; padding: 1.2vw 2vw; backdrop-filter: blur(12px); text-align: center; font-size: 2.4vw; }
+#howto .cmd { font-family: var(--font-mono); color: var(--accent2); background: oklch(30% 0.05 350 / 0.5); border-radius: 0.8vw; padding: 0.2vw 1vw; }
+
+/* status pill */
+#status { position: absolute; top: 1.2%; right: 2.5vw; font-family: var(--font-mono); font-size: 1.8vw; color: var(--ink-dim); background: var(--panel); border-radius: 999px; padding: 0.5vw 1.5vw; display: flex; align-items: center; gap: 0.8vw; }
+#status .dot { width: 1.2vw; height: 1.2vw; border-radius: 50%; background: oklch(65% 0.2 25); }
+#status.on .dot { background: oklch(75% 0.18 150); }
+
+/* demo panel */
+#demo-panel { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; width: 96vw; z-index: 20; }
+#demo-panel button { padding: 8px 12px; border-radius: 8px; border: 0; background: var(--accent); color: #fff; font-weight: 700; font-size: 12px; cursor: pointer; }
+#demo-panel button.alt { background: var(--accent2); color: #000; }
+#demo-panel button.ghost { background: oklch(30% 0.02 280); color: var(--ink); }
+
+/* setup screen */
+#setup { position: fixed; inset: 0; display: grid; place-items: center; background: oklch(15% 0.02 280); padding: 24px; }
+#setup .card { max-width: 520px; font-size: 15px; line-height: 1.7; }
+#setup h1 { font-size: 22px; margin-bottom: 12px; }
+#setup code { font-family: var(--font-mono); font-size: 13px; background: oklch(25% 0.03 280); padding: 2px 6px; border-radius: 6px; color: var(--accent2); overflow-wrap: anywhere; }
+#setup button { margin-top: 14px; padding: 10px 16px; border-radius: 8px; border: 0; background: var(--accent); color: #fff; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div id="setup">
+  <div class="card">
+    <h1>Mini-Game Overlay — Setup</h1>
+    <p>Buka dengan parameter URL:</p>
+    <p><code>minigame.html?username=USERNAME&apiKey=API_KEY&game=marble</code></p>
+    <p>atau <code>…&game=war&duration=60000&lanes=6</code></p>
+    <p style="margin-top:12px">Tanpa parameter (atau <code>apiKey=demo</code>) overlay berjalan dalam <b>mode simulasi</b> dengan tombol demo di bawah.</p>
+    <button onclick="enterDemo()">▶ Buka Demo</button>
+  </div>
+</div>
+
+<div id="stage">
+  <div id="hud">
+    <div class="title"><span id="hud-title">Marble Race</span><small id="hud-sub">gift = bola baru</small></div>
+    <div class="timer"><span id="hud-time">--:--</span><span class="lbl" id="hud-state">menunggu…</span></div>
+  </div>
+  <div id="arena-marble" class="arena">
+    <div id="track"><div id="finish"></div><div id="finish-lbl">FINISH</div></div>
+    <div id="m-standings"><h3>🏁 Klasemen</h3><ol id="m-list"><li style="color:var(--ink-dim)">Menunggu gift…</li></ol></div>
+  </div>
+  <div id="arena-war" class="arena">
+    <div class="war-team" id="team-merah"><div class="emoji">🔴</div><div class="name">MERAH</div><div class="score"><span id="score-merah">0</span> <span class="unit">💎</span></div><div class="mvp" id="mvp-merah"></div></div>
+    <div id="war-mid">
+      <div class="vs">VS</div>
+      <div id="rope">
+        <div class="half red"><div class="fill" id="rope-red" style="width:0%"></div></div>
+        <div class="half blue"><div class="fill" id="rope-blue" style="width:0%"></div></div>
+        <div id="rope-knot"></div>
+      </div>
+    </div>
+    <div class="war-team" id="team-biru"><div class="emoji">🔵</div><div class="name">BIRU</div><div class="score"><span id="score-biru">0</span> <span class="unit">💎</span></div><div class="mvp" id="mvp-biru"></div></div>
+  </div>
+  <div id="banner"><div class="num" id="ban-num"></div><div class="head" id="ban-head"></div><div class="sub" id="ban-sub"></div></div>
+  <div id="howto" style="display:none"><span id="howto-text"></span></div>
+  <div id="status"><span class="dot"></span><span id="status-text">connecting…</span></div>
+</div>
+
+<div id="demo-panel" style="display:none">
+  <button class="alt" onclick="demoGift(1)">🎁 Gift kecil</button>
+  <button class="alt" onclick="demoGift(100)">💝 Gift 100</button>
+  <button onclick="demoGift(1000)">👑 Gift SULTAN</button>
+  <button class="ghost" onclick="demoJoin('merah')">!merah</button>
+  <button class="ghost" onclick="demoJoin('biru')">!biru</button>
+  <button class="alt" onclick="demoStart()">▶ Start</button>
+  <button class="ghost" onclick="setGame(GAME === 'marble' ? 'war' : 'marble')">⇄ Ganti game</button>
+</div>
+
+<script src="minigames.js"></script>
+<script>
+(() => {
+  const qs = new URLSearchParams(location.search);
+  const USERNAME = qs.get('username');
+  const API_KEY  = qs.get('apiKey');
+  const hasCreds = !!USERNAME && !!API_KEY && API_KEY !== 'demo';
+  const DEMO = !hasCreds || qs.get('demo') === '1';
+  let GAME = qs.get('game') === 'war' ? 'war' : 'marble';
+  const LANES = Math.min(12, Math.max(2, parseInt(qs.get('lanes') || '6', 10)));
+  const DURATION = parseInt(qs.get('duration') || '0', 10) || 0;
+
+  const $ = (id) => document.getElementById(id);
+  const el = {
+    stage: $('stage'), setup: $('setup'), demo: $('demo-panel'),
+    hudTitle: $('hud-title'), hudSub: $('hud-sub'), hudTime: $('hud-time'), hudState: $('hud-state'),
+    arenaMarble: $('arena-marble'), arenaWar: $('arena-war'),
+    track: $('track'), mList: $('m-list'),
+    scoreMerah: $('score-merah'), scoreBiru: $('score-biru'),
+    mvpMerah: $('mvp-merah'), mvpBiru: $('mvp-biru'),
+    ropeRed: $('rope-red'), ropeBlue: $('rope-blue'),
+    teamMerah: $('team-merah'), teamBiru: $('team-biru'),
+    banner: $('banner'), banNum: $('ban-num'), banHead: $('ban-head'), banSub: $('ban-sub'),
+    howto: $('howto'), howtoText: $('howto-text'),
+    status: $('status'), statusText: $('status-text'),
+  };
+
+  const HOWTO = {
+    marble: [
+      `Kirim <b>gift apapun</b> → bolamu ikut balapan 🎾`,
+      `Gift <b>semakin besar</b> → bola makin besar & makin cepat 🚀`,
+      `Bola pertama sampai <b>FINISH</b> = juara! 🏆`
+    ],
+    war: [
+      `Pilih kubu: komentar <span class="cmd">!merah</span> atau <span class="cmd">!biru</span>`,
+      `Kirim <b>gift</b> → diamond masuk ke skor kubumu 🔴🔵`,
+      `Kubu dengan <b>total diamond terbanyak</b> saat waktu habis = menang 🏆`
+    ]
+  };
+
+  let game = null;
+  let marbleNodes = new Map();   // marble.id -> { lane, node, tag }
+  let bannerTimer = null;
+  let lastState = null;
+
+  function setGame(kind) {
+    GAME = kind;
+    if (game) game.reset();
+    game = (GAME === 'war')
+      ? MiniGames.create('war', { duration: DURATION || 60000, countdown: 3000, autoStart: true })
+      : MiniGames.create('marble', { mode: 'timed', duration: DURATION || 20000, countdown: 3000, lanes: LANES, autoStart: true });
+    marbleNodes.clear();
+    buildTrack();
+    bindEngine();
+    el.hudTitle.textContent = GAME === 'war' ? 'Gift War' : 'Marble Race';
+    el.hudSub.textContent = GAME === 'war' ? 'dua kubu · total gift' : 'gift = bola baru';
+    el.arenaMarble.style.display = GAME === 'war' ? 'none' : '';
+    el.arenaWar.style.display = GAME === 'war' ? '' : 'none';
+    el.howtoText.innerHTML = HOWTO[GAME][0];
+    renderStatic();
+  }
+
+  function buildTrack() {
+    if (GAME === 'war') return;
+    // remove previous lanes (keep finish/finish-lbl)
+    el.track.querySelectorAll('.lane').forEach((n) => n.remove());
+    for (let i = 0; i < LANES; i++) {
+      const lane = document.createElement('div');
+      lane.className = 'lane';
+      lane.appendChild(Object.assign(document.createElement('span'), { className: 'lane-num', textContent: i + 1 }));
+      el.track.appendChild(lane);
+    }
+    el.track.appendChild(el.track.querySelector('#finish'));
+    el.track.appendChild(el.track.querySelector('#finish-lbl'));
+  }
+
+  function bindEngine() {
+    game.subscribe((e) => {
+      if (e.type === 'state') {
+        lastState = e.state;
+        if (e.state === 'running') hideBanner();
+        if (e.state === 'ended') showWinner();
+      }
+      if (e.type === 'countdown') showCountdown();
+    });
+  }
+
+  function showCountdown() { showBanner('num'); }
+  function showWinner() {
+    const s = game.snapshot();
+    if (GAME === 'war') {
+      if (s.winner) {
+        el.banHead.textContent = '🏆 ' + s.winner.name + ' MENANG!';
+        el.banSub.textContent = 'Kubu ' + s.winner.name + ' unggul total gift!';
+        showBanner('winner');
+      } else {
+        el.banHead.textContent = '🤝 SERI!';
+        el.banSub.textContent = 'Total gift imbang, tidak ada pemenang.';
+        showBanner('winner');
+      }
+    } else {
+      if (s.winner) {
+        el.banHead.textContent = '🏆 @' + s.winner.user + ' JUARA!';
+        el.banSub.textContent = (s.winner.diamonds || 0).toLocaleString('id-ID') + ' 💎 · bola pertama sampai FINISH';
+        showBanner('winner');
+      } else {
+        el.banHead.textContent = '😴 Belum ada pemenang';
+        el.banSub.textContent = 'Kirim gift untuk ikut balapan!';
+        showBanner('winner');
+      }
+    }
+  }
+  function showBanner(kind) {
+    el.banner.classList.remove('show'); void el.banner.offsetWidth;
+    el.banNum.style.display = kind === 'num' ? '' : 'none';
+    el.banHead.style.display = kind === 'winner' ? '' : 'none';
+    el.banSub.style.display = kind === 'winner' ? '' : 'none';
+    el.banner.classList.add('show');
+  }
+  function hideBanner() { el.banner.classList.remove('show'); }
+
+  function fmtTime(ms) {
+    const s = Math.ceil(ms / 1000);
+    return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+  }
+
+  function renderStatic() {
+    if (!game) return;
+    const s = game.snapshot();
+    if (GAME === 'war') {
+      el.scoreMerah.textContent = (s.teams[0].score || 0).toLocaleString('id-ID');
+      el.scoreBiru.textContent = (s.teams[1].score || 0).toLocaleString('id-ID');
+      const m0 = s.teams[0].mvp, m1 = s.teams[1].mvp;
+      el.mvpMerah.innerHTML = m0 ? 'MVP <b>@' + escapeHtml(m0.user) + '</b>' : '';
+      el.mvpBiru.innerHTML = m1 ? 'MVP <b>@' + escapeHtml(m1.user) + '</b>' : '';
+      const total = s.teams[0].score + s.teams[1].score;
+      el.ropeRed.style.width = (total ? (s.teams[0].score / total) * 100 : 0) + '%';
+      el.ropeBlue.style.width = (total ? (s.teams[1].score / total) * 100 : 0) + '%';
+      el.teamMerah.classList.toggle('win', !!s.winner && s.winner.id === 'merah');
+      el.teamBiru.classList.toggle('win', !!s.winner && s.winner.id === 'biru');
+    }
+    // hud
+    el.hudState.textContent = stateLabel(s.state);
+    if (s.state === 'countdown') { el.hudTime.textContent = fmtTime(s.countdownMs); el.banNum.textContent = Math.ceil(s.countdownMs / 1000); }
+    else if (s.state === 'running') el.hudTime.textContent = fmtTime(s.remainingMs);
+    else if (s.state === 'ended') el.hudTime.textContent = '00:00';
+    else el.hudTime.textContent = '--:--';
+  }
+
+  function stateLabel(st) {
+    return { idle: 'menunggu gift…', countdown: 'bersiap…', running: 'MAIN!', ended: 'selesai' }[st] || st;
+  }
+
+  function renderMarble(s) {
+    // standings
+    if (s.marbles.length === 0) {
+      el.mList.innerHTML = '<li style="color:var(--ink-dim)">Menunggu gift…</li>';
+    } else {
+      const rows = s.standings.map((m) => {
+        return `<li><span class="dot" style="background:${m.color}"></span><span class="nm"></span><span class="d">${(m.diamonds || 0).toLocaleString('id-ID')}💎</span></li>`;
+      }).join('');
+      el.mList.innerHTML = rows;
+      el.mList.querySelectorAll('.nm').forEach((n, i) => { n.textContent = '@' + s.standings[i].user; });
+    }
+    // marbles
+    const lanes = el.track.querySelectorAll('.lane');
+    const seen = new Set();
+    s.marbles.forEach((m) => {
+      seen.add(m.id);
+      let entry = marbleNodes.get(m.id);
+      if (!entry) {
+        const lane = lanes[m.lane];
+        if (!lane) return;
+        const node = document.createElement('div');
+        node.className = 'marble';
+        const tag = document.createElement('span');
+        tag.className = 'tag';
+        node.appendChild(tag);
+        lane.appendChild(node);
+        entry = { node, tag };
+        marbleNodes.set(m.id, entry);
+      }
+      const size = Math.max(3, 3 + Math.sqrt(m.diamonds) * 0.25); // vw
+      entry.node.style.width = size + 'vw';
+      entry.node.style.height = size + 'vw';
+      entry.node.style.background = `radial-gradient(circle at 32% 30%, ${m.color} 0%, ${m.color} 55%, oklch(12% 0.03 280) 130%)`;
+      entry.tag.textContent = '@' + m.user;
+      entry.tag.style.color = m.color;
+      const px = (m.pos * (100 - size)) + '%';
+      entry.node.style.top = px;
+    });
+    // remove stale nodes
+    marbleNodes.forEach((entry, id) => {
+      if (!seen.has(id)) { entry.node.remove(); marbleNodes.delete(id); }
+    });
+  }
+
+  function render() {
+    if (!game) return;
+    const s = game.snapshot();
+    renderStatic();
+    if (GAME === 'marble') renderMarble(s);
+  }
+
+  let prev = null;
+  function loop(ts) {
+    if (!game) return;
+    if (prev == null) prev = ts;
+    const dt = ts - prev; prev = ts;
+    game.tick(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  // ---------- websocket (live mode) ----------
+  function connect() {
+    el.statusText.textContent = 'connecting…';
+    const ws = new WebSocket(`wss://api.tik.tools?uniqueId=${encodeURIComponent(USERNAME)}&apiKey=${encodeURIComponent(API_KEY)}`);
+    let retry = 0;
+    ws.onopen = () => { retry = 0; el.status.classList.add('on'); el.statusText.textContent = '@' + USERNAME; };
+    ws.onmessage = (evt) => {
+      let msg; try { msg = JSON.parse(evt.data); } catch { return; }
+      const e = MiniGames.normalizeRaw(msg);
+      if (e) game.ingest(e);
+    };
+    ws.onclose = () => { el.status.classList.remove('on'); el.statusText.textContent = 'reconnecting…'; setTimeout(connect, Math.min(30000, 1000 * 2 ** retry++)); };
+  }
+
+  // ---------- demo controls ----------
+  const rnd = () => Math.floor(Math.random() * 99);
+  function demoGift(d) {
+    const user = 'sultan_' + rnd();
+    game.ingest({ type: 'gift', user, giftName: d >= 1000 ? 'Galaxy' : d >= 100 ? 'Cactus' : 'Rose', diamonds: d });
+  }
+  function demoJoin(team) {
+    game.ingest({ type: 'chat', user: 'viewer_' + rnd(), comment: '!' + team });
+  }
+  function demoStart() { game.start(); }
+
+  window.setGame = setGame;
+  window.demoGift = demoGift;
+  window.demoJoin = demoJoin;
+  window.demoStart = demoStart;
+  window.enterDemo = () => { start({ demo: true }); };
+
+  function start({ demo } = {}) {
+    const isDemo = demo === true || DEMO;
+    el.setup.style.display = 'none';
+    el.stage.style.display = '';
+    el.demo.style.display = isDemo ? '' : 'none';
+    el.howto.style.display = isDemo ? 'none' : '';
+    el.howtoText.innerHTML = HOWTO[GAME][0];
+    setGame(GAME);
+    if (isDemo) {
+      el.status.classList.add('on');
+      el.statusText.textContent = 'DEMO MODE';
+    } else {
+      connect();
+    }
+    requestAnimationFrame(loop);
+  }
+
+  function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+  // live: start immediately if creds present, else show setup (demo via button)
+  if (hasCreds) start({ demo: false });
+  else if (qs.get('demo') === '1') start({ demo: true });
+  // otherwise stay on setup screen; button opens demo
+})();
+</script>
+</body>
+</html>

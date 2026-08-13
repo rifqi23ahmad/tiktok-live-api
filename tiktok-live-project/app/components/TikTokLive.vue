@@ -21,7 +21,7 @@
       </form>
       <div style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px">
         <div :style="{ width: '10px', height: '10px', borderRadius: '50%', background: connected ? '#10b981' : '#ef4444', transition: 'background 0.3s' }"></div>
-        <span style="font-size: 0.875rem; color: '#374151'; font-weight: 500">{{ connected ? 'Connected to @' + activeUsername : 'Disconnected' }}</span>
+        <span style="font-size: 0.875rem; color: '#374151'; font-weight: 500">{{ connected ? 'Connected to @' + inputUsername : 'Disconnected' }}</span>
       </div>
       <div style="height: 350px; overflow-y: auto; background: #f9fafb; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb; font-size: 0.875rem; display: flex; flex-direction: column">
         <div v-for="(e, i) in events" :key="i" style="padding: 6px 0; border-bottom: 1px solid #f3f4f6; word-break: break-word">
@@ -34,47 +34,64 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
-
+const runtimeConfig = useRuntimeConfig()
 const inputUsername = ref('aljazeeraenglish')
-const activeUsername = ref('aljazeeraenglish')
-const apiKey = ref('demo_tiktokliveapi_public_2026')
+const apiKey = ref(runtimeConfig.public.tiktool?.apiKey || 'demo_tiktokliveapi_public_2026')
 const events = ref([])
 
-let hook = null;
-try { if (typeof useTikTokLive !== 'undefined') hook = useTikTokLive; } catch (e) { }
-const tiktok = hook ? hook(activeUsername, { apiKey, autoConnect: false }) : { connected: ref(false), allEvents: ref([]) }
-const connected = tiktok.connected
-
-watch(() => tiktok.allEvents.value, (all) => {
-  if (all && all.length) {
-    const last = all[all.length - 1];
-    if (last.type === 'chat') addEvent(`💬 ${last.data.user.uniqueId}: ${last.data.comment}`)
-    if (last.type === 'gift') addEvent(`🎁 ${last.data.user.uniqueId} sent ${last.data.giftName}`)
-    if (last.type === 'like') addEvent(`❤️ ${last.data.user.uniqueId} liked`)
-    if (last.type === 'member') addEvent(`👋 ${last.data.user.uniqueId} joined`)
-    if (last.type === 'connected') addEvent('✅ Connected successfully!')
-    if (last.type === 'disconnected') addEvent('❌ Disconnected from stream.')
-  }
-}, { deep: true })
-
-watch(() => tiktok.error ? tiktok.error.value : null, (e) => {
-  if(e) addEvent('⚠️ Error: ' + e)
-})
+const connected = ref(false)
+let ws = null
 
 const addEvent = (str) => {
   events.value.push(str)
-  if(events.value.length > 50) events.value.shift()
+  if (events.value.length > 50) events.value.shift()
+}
+
+const connect = () => {
+  if (ws) return
+  const key = apiKey.value
+  if (!key) {
+    addEvent('⚠️ Error: No API key')
+    return
+  }
+  const id = inputUsername.value.replace(/^@/, '')
+  const url = `wss://api.tik.tools?uniqueId=${id}&apiKey=${key}`
+
+  ws = new WebSocket(url)
+  ws.onopen = () => {
+    connected.value = true
+    addEvent('✅ Connected successfully!')
+  }
+  ws.onmessage = (evt) => {
+    try {
+      const msg = JSON.parse(evt.data)
+      const user = msg.data?.user?.uniqueId || ''
+      switch (msg.event) {
+        case 'chat': addEvent(`💬 ${user}: ${msg.data.comment}`); break
+        case 'gift': addEvent(`🎁 ${user} sent ${msg.data.giftName} (${msg.data.diamondCount}💎)`); break
+        case 'like': addEvent(`❤️ ${user} liked`); break
+        case 'member': addEvent(`👋 ${user} joined`); break
+        case 'roomUserSeq': break
+        default: break
+      }
+    } catch {}
+  }
+  ws.onclose = () => {
+    connected.value = false
+    ws = null
+    addEvent('❌ Disconnected from stream.')
+  }
+  ws.onerror = () => {
+    addEvent('⚠️ Error: WebSocket error')
+  }
 }
 
 const handleConnect = () => {
-  if (tiktok.disconnect) tiktok.disconnect()
+  if (ws) { ws.close(); ws = null }
+  connected.value = false
   events.value = []
-  activeUsername.value = inputUsername.value
-  if (!activeUsername.value) return
-  if (tiktok.connect) {
-    tiktok.connect().catch(e => addEvent('⚠️ Failed: ' + e.message))
-  }
+  if (!inputUsername.value) return
+  connect()
 }
 
 onMounted(() => {
