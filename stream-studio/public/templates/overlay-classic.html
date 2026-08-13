@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stream Studio — Hallmark Classic</title>
+<script src="./demo.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* Hallmark · component: stream-overlay · genre: atmospheric · theme: custom (transparent overlay)
+ * states: idle · alert-active · combo · goal-progress · goal-complete
+ * pre-emit critique: P4 H5 E4 S4 R4 V4
+ */
+:root {
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --color-ink: oklch(98% 0.01 90);
+  --color-ink-dim: oklch(80% 0.02 90);
+  --color-panel: oklch(15% 0.02 280 / 0.72);
+  --color-panel-edge: oklch(60% 0.05 280 / 0.35);
+  --color-accent: oklch(75% 0.19 350);      /* TikTok pink-magenta */
+  --color-accent-2: oklch(82% 0.15 195);    /* TikTok cyan */
+  --color-gold: oklch(85% 0.16 90);
+  --color-goal-fill: oklch(70% 0.2 350);
+
+  --tier1: oklch(75% 0.1 250);
+  --tier2: oklch(78% 0.15 195);
+  --tier3: oklch(75% 0.19 350);
+  --tier4: oklch(85% 0.16 90);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  font-family: var(--font-display);
+  color: var(--color-ink);
+}
+
+/* ============ LAYOUT: portrait 9:16 zones ============ */
+#stage {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============ GOAL BAR (top, below host badge) ============ */
+#goal {
+  position: absolute;
+  top: 7.5%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 86vw;
+  background: var(--color-panel);
+  border: 1px solid var(--color-panel-edge);
+  border-radius: 2vw;
+  padding: 1.4vw 2vw 1.6vw;
+  backdrop-filter: blur(12px);
+}
+#goal-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 1vw;
+  font-size: 2.7vw;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+#goal-title { color: var(--color-ink); }
+#goal-count {
+  font-family: var(--font-mono);
+  font-size: 2.4vw;
+  color: var(--color-ink-dim);
+}
+#goal-count b { color: var(--color-gold); font-weight: 700; }
+#goal-track {
+  height: 2.2vw;
+  border-radius: 999px;
+  background: oklch(30% 0.03 280 / 0.8);
+  overflow: hidden;
+  position: relative;
+}
+#goal-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--color-accent-2), var(--color-goal-fill));
+  transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+}
+#goal-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, oklch(100% 0 0 / 0.35), transparent);
+  transform: translateX(-100%);
+  animation: shimmer 2.4s ease-in-out infinite;
+}
+@keyframes shimmer { to { transform: translateX(100%); } }
+#goal.complete #goal-fill { background: var(--color-gold); }
+#goal.complete { animation: goalPulse 0.8s ease-in-out 3; }
+@keyframes goalPulse {
+  50% { border-color: var(--color-gold); box-shadow: 0 0 24px oklch(85% 0.16 90 / 0.5); }
+}
+
+/* ============ LEADERBOARD (left, mid) ============ */
+#board {
+  position: absolute;
+  top: calc(7.5% + 13vw);
+  left: 2.5vw;
+  width: 42vw;
+  background: var(--color-panel);
+  border: 1px solid var(--color-panel-edge);
+  border-radius: 2vw;
+  padding: 1.8vw;
+  backdrop-filter: blur(12px);
+}
+#board h2 {
+  font-size: 2.3vw;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent-2);
+  margin-bottom: 1.2vw;
+  display: flex;
+  align-items: center;
+  gap: 1vw;
+}
+#board ol { list-style: none; display: flex; flex-direction: column; gap: 1vw; }
+#board li {
+  display: grid;
+  grid-template-columns: 4.5vw minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1.2vw;
+  font-size: 2.5vw;
+  padding: 0.8vw 1.2vw;
+  border-radius: 1.4vw;
+  background: oklch(25% 0.03 280 / 0.5);
+  transition: transform 400ms cubic-bezier(0.22, 1, 0.36, 1), background 400ms;
+}
+#board li.bump { animation: bump 500ms cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes bump {
+  30% { transform: scale(1.06); background: oklch(35% 0.08 350 / 0.6); }
+}
+#board li:first-child {
+  background: oklch(35% 0.07 90 / 0.55);
+  border: 1px solid oklch(85% 0.16 90 / 0.4);
+}
+.rank {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 2.2vw;
+  color: var(--color-ink-dim);
+  text-align: center;
+}
+li:first-child .rank { color: var(--color-gold); }
+.gname {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.gdiam {
+  font-family: var(--font-mono);
+  font-size: 2.1vw;
+  font-weight: 700;
+  color: var(--color-gold);
+  white-space: nowrap;
+}
+#board .empty { font-size: 2.3vw; color: var(--color-ink-dim); padding: 0.6vw 1.2vw; }
+
+/* ============ LIKE COMBO (right, mid) ============ */
+#likes {
+  position: absolute;
+  top: calc(7.5% + 13vw);
+  right: 2.5vw;
+  text-align: right;
+  opacity: 0;
+  transition: opacity 400ms;
+}
+#likes.active { opacity: 1; }
+#like-num {
+  font-family: var(--font-mono);
+  font-size: 7vw;
+  font-weight: 700;
+  color: var(--color-accent);
+  text-shadow: 0 2px 16px oklch(75% 0.19 350 / 0.55);
+  line-height: 1;
+}
+#likes.pop #like-num { animation: likePop 300ms cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes likePop { 40% { transform: scale(1.25); } }
+#like-cap {
+  font-size: 2.2vw;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-dim);
+  margin-top: 0.4vw;
+}
+
+/* ============ GIFT ALERT (center) ============ */
+#alert {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.6);
+  opacity: 0;
+  pointer-events: none;
+  text-align: center;
+  width: 90vw;
+}
+#alert.show {
+  animation: alertIn 500ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+             alertOut 400ms ease-in forwards var(--hold, 3.5s);
+}
+@keyframes alertIn {
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes alertOut {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to { opacity: 0; transform: translate(-50%, -60%) scale(0.85); }
+}
+#alert-emoji { font-size: 14vw; line-height: 1; display: block; }
+#alert.t2 #alert-emoji { font-size: 17vw; }
+#alert.t3 #alert-emoji { font-size: 20vw; }
+#alert.t4 #alert-emoji { font-size: 24vw; animation: spinFloat 1.6s ease-in-out infinite; }
+@keyframes spinFloat {
+  50% { transform: translateY(-2vw) rotate(8deg); }
+}
+#alert-name {
+  font-size: 5.5vw;
+  font-weight: 700;
+  margin-top: 1.5vw;
+  text-shadow: 0 2px 12px oklch(0% 0 0 / 0.8);
+}
+#alert.t1 #alert-name { color: var(--tier1); }
+#alert.t2 #alert-name { color: var(--tier2); }
+#alert.t3 #alert-name { color: var(--tier3); }
+#alert.t4 #alert-name { color: var(--tier4); font-size: 7vw; }
+#alert-gift {
+  font-size: 3.6vw;
+  font-weight: 500;
+  color: var(--color-ink);
+  text-shadow: 0 2px 10px oklch(0% 0 0 / 0.8);
+  margin-top: 0.6vw;
+}
+#alert-gift b {
+  font-family: var(--font-mono);
+  color: var(--color-gold);
+}
+
+/* burst particles for t3/t4 */
+.particle {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  font-size: 5vw;
+  pointer-events: none;
+  animation: burst 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes burst {
+  to {
+    transform: translate(var(--dx), var(--dy)) rotate(var(--rot));
+    opacity: 0;
+  }
+}
+
+/* ============ WELCOME TOAST (upper-left, above TikTok chat area) ============ */
+#welcome {
+  position: absolute;
+  top: 52%;
+  left: 2.5vw;
+  background: var(--color-panel);
+  border: 1px solid var(--color-panel-edge);
+  border-radius: 1.6vw;
+  padding: 1.2vw 2vw;
+  font-size: 2.6vw;
+  backdrop-filter: blur(12px);
+  opacity: 0;
+  transform: translateX(-16px);
+  transition: opacity 300ms, transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+#welcome.show { opacity: 1; transform: translateX(0); }
+#welcome b { color: var(--color-accent-2); }
+
+/* ============ TUTORIAL TICKER (mid, above TikTok chat zone) ============
+ * TikTok portrait UI: chat penonton menutupi ~bawah 35% layar,
+ * jadi ticker ditaruh di ~58% dari atas — masih terlihat jelas
+ * tapi tidak ketutup chat / tombol gift. */
+#howto {
+  position: absolute;
+  top: 58%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 86vw;
+  background: var(--color-panel);
+  border: 1px solid var(--color-panel-edge);
+  border-radius: 1.8vw;
+  padding: 1.3vw 2vw;
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  gap: 1.4vw;
+  overflow: hidden;
+}
+#howto .tag {
+  flex-shrink: 0;
+  font-size: 1.9vw;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent-2);
+}
+#howto-item {
+  font-size: 2.5vw;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 350ms, transform 350ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+#howto-item.out { opacity: 0; transform: translateY(-10px); }
+#howto-item b { color: var(--color-accent); }
+#howto-item .cmd {
+  font-family: var(--font-mono);
+  font-size: 2.2vw;
+  background: oklch(30% 0.05 350 / 0.6);
+  border: 1px solid oklch(60% 0.1 350 / 0.4);
+  padding: 0.2vw 1vw;
+  border-radius: 0.8vw;
+  color: var(--color-accent-2);
+}
+
+/* ============ EMOJI RAIN (chat command) ============ */
+.rain {
+  position: fixed;
+  top: -8vw;
+  font-size: 6vw;
+  pointer-events: none;
+  animation: rainFall var(--dur, 3s) linear forwards;
+}
+@keyframes rainFall {
+  to { transform: translateY(110vh) rotate(var(--rot, 20deg)); opacity: 0.9; }
+}
+
+/* ============ FLOATING CHAT EMOJI (naik dari bawah) ============ */
+.float-up {
+  position: fixed;
+  bottom: -10vw;
+  font-size: var(--fs, 7vw);
+  pointer-events: none;
+  animation: floatUp var(--dur, 3.4s) cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+}
+@keyframes floatUp {
+  20% { opacity: 1; }
+  to {
+    transform: translateY(-105vh) translateX(var(--sway, 0px)) rotate(var(--rot, 0deg)) scale(var(--sc, 1));
+    opacity: 0;
+  }
+}
+
+/* ============ HYPE METER (kanan bawah zona aman) ============ */
+#hype {
+  position: absolute;
+  top: 47%;
+  right: 2.5vw;
+  width: 4.5vw;
+  height: 26vw;
+  background: var(--color-panel);
+  border: 1px solid var(--color-panel-edge);
+  border-radius: 999px;
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+}
+#hype-fill {
+  width: 100%;
+  height: 0%;
+  border-radius: 999px;
+  background: linear-gradient(0deg, var(--color-accent), var(--color-gold));
+  transition: height 400ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+#hype-label {
+  position: absolute;
+  top: calc(47% + 27vw);
+  right: 2.5vw;
+  width: 4.5vw;
+  text-align: center;
+  font-size: 2.4vw;
+}
+#hype.max { animation: hypeShake 300ms ease-in-out 4; border-color: var(--color-gold); }
+@keyframes hypeShake {
+  25% { transform: translateX(-0.5vw); }
+  75% { transform: translateX(0.5vw); }
+}
+
+/* ============ CEK KODAM ============ */
+#kodam {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.7);
+  opacity: 0;
+  pointer-events: none;
+  text-align: center;
+  width: 88vw;
+}
+#kodam.show { animation: kodamIn 600ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards, alertOut 500ms ease-in forwards 4.6s; }
+@keyframes kodamIn {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.7) rotate(-4deg); }
+  60% { opacity: 1; transform: translate(-50%, -50%) scale(1.05) rotate(2deg); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+}
+#kodam-card {
+  background: oklch(18% 0.06 300 / 0.88);
+  border: 2px solid oklch(70% 0.15 300 / 0.6);
+  border-radius: 3vw;
+  padding: 3vw 4vw 3.5vw;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 0 8vw oklch(60% 0.2 300 / 0.35);
+}
+#kodam-title {
+  font-size: 2.4vw;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: oklch(78% 0.12 300);
+}
+#kodam-emoji { font-size: 16vw; line-height: 1.2; display: block; margin: 1vw 0; }
+#kodam.show #kodam-emoji { animation: kodamFloat 2s ease-in-out infinite; }
+@keyframes kodamFloat { 50% { transform: translateY(-1.5vw); } }
+#kodam-name {
+  font-size: 6vw;
+  font-weight: 700;
+  color: var(--color-gold);
+  text-shadow: 0 0 3vw oklch(85% 0.16 90 / 0.6);
+}
+#kodam-user { font-size: 2.8vw; color: var(--color-ink-dim); margin-top: 1vw; }
+#kodam-user b { color: var(--color-accent-2); }
+/* aura particles */
+.aura {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  font-size: 4vw;
+  pointer-events: none;
+  animation: burst 1.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* CHAT ON FIRE banner */
+#onfire {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.7);
+  opacity: 0;
+  pointer-events: none;
+  text-align: center;
+  width: 92vw;
+}
+#onfire.show { animation: alertIn 400ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards, alertOut 500ms ease-in forwards 3.2s; }
+#onfire .big {
+  font-size: 9vw;
+  font-weight: 700;
+  color: var(--color-gold);
+  text-shadow: 0 0 4vw oklch(75% 0.19 350 / 0.8), 0 2px 12px oklch(0% 0 0 / 0.9);
+  letter-spacing: 0.02em;
+}
+#onfire .sub { font-size: 3.2vw; color: var(--color-ink); text-shadow: 0 2px 8px oklch(0% 0 0 / 0.9); margin-top: 1vw; }
+
+/* ============ CHAT SHOUT (command !sapa) ============ */
+#shout {
+  position: absolute;
+  top: 47%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.8);
+  opacity: 0;
+  text-align: center;
+  width: 88vw;
+  pointer-events: none;
+}
+#shout.show { animation: alertIn 400ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards, alertOut 400ms ease-in forwards 3s; }
+#shout-text {
+  font-size: 4.6vw;
+  font-weight: 700;
+  color: var(--color-accent-2);
+  text-shadow: 0 2px 12px oklch(0% 0 0 / 0.8);
+  overflow-wrap: anywhere;
+}
+#shout-from { font-size: 2.6vw; color: var(--color-ink-dim); margin-top: 0.6vw; }
+
+/* ============ PK PREDICTION (tebak pemenang PK) ============ */
+#pk {
+  position: absolute;
+  top: 26%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.82);
+  width: 88vw;
+  background: var(--color-panel);
+  border: 1px solid var(--color-panel-edge);
+  border-radius: 2.4vw;
+  padding: 2.4vw 2.6vw 2.8vw;
+  backdrop-filter: blur(14px);
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms, transform 350ms cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 40;
+}
+#pk.show { opacity: 1; transform: translate(-50%, -50%) scale(1); pointer-events: auto; }
+#pk-title {
+  font-size: 3.2vw;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-ink);
+  margin-bottom: 0.6vw;
+}
+#pk-hint {
+  font-size: 2.2vw;
+  color: var(--color-ink-dim);
+  margin-bottom: 1.6vw;
+}
+#pk-hint .cmd {
+  font-family: var(--font-mono);
+  font-size: 2vw;
+  background: oklch(30% 0.05 350 / 0.6);
+  border: 1px solid oklch(60% 0.1 350 / 0.4);
+  padding: 0.2vw 1vw;
+  border-radius: 0.8vw;
+  color: var(--color-accent-2);
+}
+#pk-teams { display: flex; gap: 2.2vw; }
+.pk-team {
+  flex: 1;
+  background: oklch(25% 0.03 280 / 0.5);
+  border: 1px solid var(--color-panel-edge);
+  border-radius: 1.8vw;
+  padding: 1.6vw 1.4vw 2vw;
+  transition: border-color 300ms, box-shadow 300ms, background 300ms;
+}
+.pk-team.win {
+  border-color: var(--color-gold);
+  background: oklch(35% 0.07 90 / 0.5);
+  box-shadow: 0 0 2.4vw oklch(85% 0.16 90 / 0.35);
+}
+.pk-team .side {
+  font-size: 1.9vw;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-ink-dim);
+  margin-bottom: 0.5vw;
+}
+.pk-team .pname {
+  font-size: 3.1vw;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pk-team.win .pname { color: var(--color-gold); }
+.pk-team .pscore {
+  font-family: var(--font-mono);
+  font-size: 2.2vw;
+  font-weight: 700;
+  color: var(--color-gold);
+  margin-top: 0.3vw;
+}
+.pk-track {
+  height: 2vw;
+  border-radius: 999px;
+  background: oklch(30% 0.03 280 / 0.8);
+  overflow: hidden;
+  margin-top: 1vw;
+}
+.pk-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--color-accent-2), var(--color-accent));
+  transition: width 450ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.pk-team.win .pk-fill { background: linear-gradient(90deg, var(--color-accent-2), var(--color-gold)); }
+.pk-votes {
+  font-family: var(--font-mono);
+  font-size: 2.1vw;
+  color: var(--color-ink-dim);
+  margin-top: 0.7vw;
+}
+.pk-votes b { color: var(--color-ink); }
+#pk-result {
+  margin-top: 1.8vw;
+  font-size: 3.4vw;
+  font-weight: 700;
+  color: var(--color-gold);
+  text-shadow: 0 0 2.6vw oklch(85% 0.16 90 / 0.55);
+  display: none;
+}
+#pk-result.show { display: block; animation: likePop 400ms cubic-bezier(0.22, 1, 0.36, 1); }
+#pk-correct { font-size: 2.2vw; color: var(--color-ink-dim); margin-top: 0.5vw; }
+
+/* ============ CONNECTION STATUS (top-right, tiny) ============ */
+#status {
+  position: absolute;
+  top: 1.2%;
+  right: 2.5vw;
+  font-family: var(--font-mono);
+  font-size: 1.8vw;
+  color: var(--color-ink-dim);
+  background: var(--color-panel);
+  border-radius: 999px;
+  padding: 0.5vw 1.5vw;
+  display: flex;
+  align-items: center;
+  gap: 0.8vw;
+  opacity: 0.85;
+}
+#status .dot {
+  width: 1.2vw; height: 1.2vw; border-radius: 50%;
+  background: oklch(65% 0.2 25);
+}
+#status.on .dot { background: oklch(75% 0.18 150); }
+
+/* setup screen (shown only when params missing) */
+#setup {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: oklch(15% 0.02 280);
+  padding: 24px;
+}
+#setup .card {
+  max-width: 520px;
+  font-size: 15px;
+  line-height: 1.7;
+}
+#setup h1 { font-size: 22px; margin-bottom: 12px; }
+#setup code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: oklch(25% 0.03 280);
+  padding: 2px 6px;
+  border-radius: 6px;
+  color: var(--color-accent-2);
+  overflow-wrap: anywhere;
+}
+#setup .hidden { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<div id="setup">
+  <div class="card">
+    <h1>TikTok Live Overlay — Setup</h1>
+    <p>Tambahkan parameter di URL:</p>
+    <p><code>overlay.html?username=USERNAME&apiKey=API_KEY&goal=5000&goalTitle=Target%20Hari%20Ini</code></p>
+    <p style="margin-top:12px">Lalu pakai URL itu sebagai <b>Browser Source</b> di OBS / TikTok Live Studio (1080×1920, background transparan otomatis).</p>
+  </div>
+</div>
+
+<div id="stage" style="display:none">
+  <div id="goal">
+    <div id="goal-label">
+      <span id="goal-title">Target Hari Ini</span>
+      <span id="goal-count"><b id="goal-cur">0</b> / <span id="goal-max">5000</span> 💎</span>
+    </div>
+    <div id="goal-track"><div id="goal-fill"></div></div>
+  </div>
+
+  <div id="board">
+    <h2>🏆 Top Sultan</h2>
+    <ol id="board-list"><li class="empty">Menunggu gift pertama…</li></ol>
+  </div>
+
+  <div id="likes">
+    <div id="like-num">0</div>
+    <div id="like-cap">❤️ Likes</div>
+  </div>
+
+  <div id="alert">
+    <span id="alert-emoji">🎁</span>
+    <div id="alert-name"></div>
+    <div id="alert-gift"></div>
+  </div>
+
+  <div id="welcome"></div>
+
+  <div id="shout">
+    <div id="shout-text"></div>
+    <div id="shout-from"></div>
+  </div>
+
+  <div id="howto">
+    <span class="tag">Cara Main</span>
+    <span id="howto-item"></span>
+  </div>
+
+  <div id="hype"><div id="hype-fill"></div></div>
+  <div id="hype-label">🔥</div>
+
+  <div id="onfire">
+    <div class="big">🔥 CHAT ON FIRE 🔥</div>
+    <div class="sub">Kalian luar biasa! Gas terus!</div>
+  </div>
+
+  <div id="kodam">
+    <div id="kodam-card">
+      <div id="kodam-title">✦ Kodam Terdeteksi ✦</div>
+      <span id="kodam-emoji"></span>
+      <div id="kodam-name"></div>
+      <div id="kodam-user"></div>
+    </div>
+  </div>
+
+  <div id="pk">
+    <div id="pk-title">🔮 TEBAK PEMENANG PK</div>
+    <div id="pk-hint">Ketik <span class="cmd">!pilih 1</span> atau <span class="cmd">!pilih 2</span> di chat</div>
+    <div id="pk-teams">
+      <div class="pk-team" data-team="0">
+        <div class="side">Tim Kiri</div>
+        <div class="pname">—</div>
+        <div class="pscore">0 💎</div>
+        <div class="pk-track"><div class="pk-fill"></div></div>
+        <div class="pk-votes"><b>0</b> suara</div>
+      </div>
+      <div class="pk-team" data-team="1">
+        <div class="side">Tim Kanan</div>
+        <div class="pname">—</div>
+        <div class="pscore">0 💎</div>
+        <div class="pk-track"><div class="pk-fill"></div></div>
+        <div class="pk-votes"><b>0</b> suara</div>
+      </div>
+    </div>
+    <div id="pk-result"></div>
+    <div id="pk-correct"></div>
+  </div>
+
+  <div id="status"><span class="dot"></span><span id="status-text">connecting…</span></div>
+</div>
+
+<script>
+(() => {
+  const qs = new URLSearchParams(location.search);
+  const USERNAME = qs.get('username');
+  const API_KEY  = qs.get('apiKey');
+  const GOAL     = parseInt(qs.get('goal') || '5000', 10);
+  const GOAL_TITLE = qs.get('goalTitle') || 'Target Hari Ini';
+
+  if (!USERNAME || !API_KEY) return; // stay on setup screen
+
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('stage').style.display = '';
+  document.getElementById('goal-title').textContent = GOAL_TITLE;
+  document.getElementById('goal-max').textContent = GOAL.toLocaleString('id-ID');
+
+  // ---------- state ----------
+  const gifters = new Map();   // uniqueId -> diamonds
+  let goalCur = 0;
+  let totalLikes = 0;
+  const alertQueue = [];
+  let alertBusy = false;
+
+  // ---------- goal bar ----------
+  const goalEl = document.getElementById('goal');
+  const goalFill = document.getElementById('goal-fill');
+  const goalCurEl = document.getElementById('goal-cur');
+  function updateGoal(add) {
+    goalCur += add;
+    goalCurEl.textContent = goalCur.toLocaleString('id-ID');
+    const pct = Math.min(100, (goalCur / GOAL) * 100);
+    goalFill.style.width = pct + '%';
+    if (goalCur >= GOAL && !goalEl.classList.contains('complete')) {
+      goalEl.classList.add('complete');
+    }
+  }
+
+  // ---------- leaderboard ----------
+  const boardList = document.getElementById('board-list');
+  function updateBoard(user, diamonds) {
+    gifters.set(user, (gifters.get(user) || 0) + diamonds);
+    const top = [...gifters.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+    boardList.innerHTML = '';
+    const medals = ['👑', '2', '3', '4', '5'];
+    top.forEach(([name, d], i) => {
+      const li = document.createElement('li');
+      li.innerHTML = `<span class="rank">${medals[i]}</span><span class="gname"></span><span class="gdiam">${d.toLocaleString('id-ID')} 💎</span>`;
+      li.querySelector('.gname').textContent = name;
+      if (name === user) li.classList.add('bump');
+      boardList.appendChild(li);
+    });
+  }
+
+  // ---------- gift alert (queued) ----------
+  const alertEl = document.getElementById('alert');
+  const aEmoji = document.getElementById('alert-emoji');
+  const aName = document.getElementById('alert-name');
+  const aGift = document.getElementById('alert-gift');
+
+  function tierOf(d) {
+    if (d >= 1000) return 4;
+    if (d >= 100) return 3;
+    if (d >= 10) return 2;
+    return 1;
+  }
+  const tierEmoji = { 1: '🎁', 2: '💝', 3: '🚀', 4: '👑' };
+  const tierHold = { 1: 2200, 2: 3000, 3: 4200, 4: 6000 };
+
+  function enqueueAlert(user, giftName, diamonds) {
+    alertQueue.push({ user, giftName, diamonds });
+    if (!alertBusy) nextAlert();
+  }
+  function nextAlert() {
+    const item = alertQueue.shift();
+    if (!item) { alertBusy = false; return; }
+    alertBusy = true;
+    const t = tierOf(item.diamonds);
+    alertEl.className = 't' + t;
+    aEmoji.textContent = tierEmoji[t];
+    aName.textContent = '@' + item.user;
+    aGift.innerHTML = `mengirim <b></b>`;
+    aGift.querySelector('b').textContent = `${item.giftName} · ${item.diamonds.toLocaleString('id-ID')} 💎`;
+    alertEl.style.setProperty('--hold', (tierHold[t] / 1000) + 's');
+    // retrigger animation
+    void alertEl.offsetWidth;
+    alertEl.classList.add('show');
+    if (t >= 3) burst(t === 4 ? 24 : 12);
+    setTimeout(() => {
+      alertEl.classList.remove('show');
+      setTimeout(nextAlert, 250);
+    }, tierHold[t] + 900);
+  }
+
+  function burst(n) {
+    const emojis = ['✨', '💎', '⭐', '🎉'];
+    for (let i = 0; i < n; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.textContent = emojis[i % emojis.length];
+      const ang = (Math.PI * 2 * i) / n + Math.random() * 0.5;
+      const dist = 120 + Math.random() * 180;
+      p.style.setProperty('--dx', Math.cos(ang) * dist + 'px');
+      p.style.setProperty('--dy', Math.sin(ang) * dist + 'px');
+      p.style.setProperty('--rot', (Math.random() * 360 - 180) + 'deg');
+      document.getElementById('stage').appendChild(p);
+      setTimeout(() => p.remove(), 1300);
+    }
+  }
+
+  // ---------- like combo ----------
+  const likesEl = document.getElementById('likes');
+  const likeNum = document.getElementById('like-num');
+  let likeHideTimer;
+  function onLike(count, total) {
+    totalLikes = total || (totalLikes + count);
+    likeNum.textContent = totalLikes.toLocaleString('id-ID');
+    likesEl.classList.add('active');
+    likesEl.classList.remove('pop');
+    void likesEl.offsetWidth;
+    likesEl.classList.add('pop');
+    clearTimeout(likeHideTimer);
+    likeHideTimer = setTimeout(() => likesEl.classList.remove('active'), 8000);
+  }
+
+  // ---------- welcome toast ----------
+  const welcomeEl = document.getElementById('welcome');
+  let welcomeTimer;
+  let lastWelcome = 0;
+  function onMember(user) {
+    const now = Date.now();
+    if (now - lastWelcome < 2500) return; // throttle
+    lastWelcome = now;
+    welcomeEl.innerHTML = `👋 Selamat datang <b></b>!`;
+    welcomeEl.querySelector('b').textContent = '@' + user;
+    welcomeEl.classList.add('show');
+    clearTimeout(welcomeTimer);
+    welcomeTimer = setTimeout(() => welcomeEl.classList.remove('show'), 3500);
+  }
+
+  // ---------- tutorial ticker ----------
+  const HOWTO = [
+    `Komentar <b>"cek kodam"</b> → kodammu terungkap di layar 🔮`,
+    `Komentar <b>"cek nasib"</b> → ramalan nasibmu hari ini ⭐`,
+    `Ketik <b>emoji apa aja</b> di komentar → langsung terbang di layar! 🎈`,
+    `Komentar <b>"hujan"</b> → hujan emoji turun 🌧️`,
+    `Komentar <b>"wkwkwk"</b> → 😂 terbang · <b>"gas"</b> → 🔥 · <b>"love"</b> → ❤️`,
+    `Ketik <span class="cmd">!sapa pesan kamu</span> → pesanmu tampil BESAR di layar`,
+    `Ramaikan chat → isi <b>🔥 hype meter</b> di kanan, penuh = kejutan!`,
+    `Kirim <b>gift apapun</b> → namamu muncul di alert + leaderboard 🏆`,
+    `Gift <b>≥ 1000 💎</b> → jadi SULTAN, animasi mahkota raksasa 👑`,
+    `Saat <b>PK</b> berlangsung, ketik <span class="cmd">!pilih 1</span> / <span class="cmd">!pilih 2</span> → tebak pemenang! 🔮`,
+    `Bantu capai <b>target diamond</b> di bar atas!`,
+  ];
+  const howtoItem = document.getElementById('howto-item');
+  let howtoIdx = 0;
+  function rotateHowto() {
+    howtoItem.classList.add('out');
+    setTimeout(() => {
+      howtoItem.innerHTML = HOWTO[howtoIdx % HOWTO.length];
+      howtoIdx++;
+      howtoItem.classList.remove('out');
+    }, 360);
+  }
+  howtoItem.innerHTML = HOWTO[0];
+  howtoIdx = 1;
+  setInterval(rotateHowto, 6000);
+
+  // ---------- chat commands ----------
+  const RAIN_EMOJIS = ['🌧️', '💧', '⭐', '✨', '❤️', '🔥'];
+  let lastRain = 0;
+  function cmdRain(force) {
+    const now = Date.now();
+    if (!force && now - lastRain < 5000) return; // cooldown 5s biar ngga spam
+    lastRain = now;
+    for (let i = 0; i < 36; i++) {
+      setTimeout(() => {
+        const p = document.createElement('div');
+        p.className = 'rain';
+        p.textContent = RAIN_EMOJIS[Math.floor(Math.random() * RAIN_EMOJIS.length)];
+        p.style.left = Math.random() * 100 + 'vw';
+        p.style.setProperty('--dur', (2.2 + Math.random() * 1.8) + 's');
+        p.style.setProperty('--rot', (Math.random() * 90 - 45) + 'deg');
+        document.body.appendChild(p);
+        setTimeout(() => p.remove(), 4500);
+      }, i * 70);
+    }
+  }
+
+  const shoutEl = document.getElementById('shout');
+  const shoutText = document.getElementById('shout-text');
+  const shoutFrom = document.getElementById('shout-from');
+  let lastShout = 0;
+  function cmdShout(user, text) {
+    const now = Date.now();
+    if (now - lastShout < 6000 || !text) return; // cooldown 6s
+    lastShout = now;
+    shoutText.textContent = text.slice(0, 80);
+    shoutFrom.textContent = '— @' + user;
+    shoutEl.classList.remove('show');
+    void shoutEl.offsetWidth;
+    shoutEl.classList.add('show');
+  }
+
+  // ---------- floating emoji dari chat ----------
+  const EMOJI_RE = /\p{Extended_Pictographic}/gu;
+  let floatBudget = 24;          // max emoji terbang bersamaan (jaga performa)
+  function floatEmoji(char) {
+    if (floatBudget <= 0) return;
+    floatBudget--;
+    const p = document.createElement('div');
+    p.className = 'float-up';
+    p.textContent = char;
+    p.style.left = (5 + Math.random() * 85) + 'vw';
+    p.style.setProperty('--dur', (2.6 + Math.random() * 2) + 's');
+    p.style.setProperty('--sway', (Math.random() * 30 - 15) + 'vw');
+    p.style.setProperty('--rot', (Math.random() * 60 - 30) + 'deg');
+    p.style.setProperty('--sc', (0.8 + Math.random() * 0.9).toFixed(2));
+    p.style.setProperty('--fs', (5 + Math.random() * 5).toFixed(1) + 'vw');
+    document.body.appendChild(p);
+    setTimeout(() => { p.remove(); floatBudget++; }, 4800);
+  }
+
+  // ---------- hype meter ----------
+  const hypeEl = document.getElementById('hype');
+  const hypeFill = document.getElementById('hype-fill');
+  const onfireEl = document.getElementById('onfire');
+  let hype = 0;
+  let lastOnFire = 0;
+  function addHype(n) {
+    hype = Math.min(100, hype + n);
+    hypeFill.style.height = hype + '%';
+    if (hype >= 100 && Date.now() - lastOnFire > 30000) {
+      lastOnFire = Date.now();
+      hypeEl.classList.add('max');
+      onfireEl.classList.remove('show');
+      void onfireEl.offsetWidth;
+      onfireEl.classList.add('show');
+      cmdRain(true);   // hujan otomatis saat on fire
+      setTimeout(() => { hypeEl.classList.remove('max'); hype = 0; hypeFill.style.height = '0%'; }, 4000);
+    }
+  }
+  // decay: turun pelan kalau chat sepi
+  setInterval(() => {
+    hype = Math.max(0, hype - 3);
+    hypeFill.style.height = hype + '%';
+  }, 1500);
+
+  // ---------- cek kodam ----------
+  const KODAMS = [
+    { e: '🐅', n: 'Macan Putih' },      { e: '🐍', n: 'Ular Naga Hijau' },
+    { e: '🦅', n: 'Elang Emas' },       { e: '🐢', n: 'Kura-Kura Sepuh' },
+    { e: '🦍', n: 'Kingkong Gunung' },  { e: '🐊', n: 'Buaya Putih Keramat' },
+    { e: '🐈‍⬛', n: 'Kucing Hitam Wingit' }, { e: '🦂', n: 'Kalajengking Merah' },
+    { e: '🐉', n: 'Naga Samudra' },     { e: '🦉', n: 'Burung Hantu Sakti' },
+    { e: '🐺', n: 'Serigala Bulan' },   { e: '🐘', n: 'Gajah Petir' },
+    { e: '🦁', n: 'Singa Barong' },     { e: '🐒', n: 'Monyet Sakti Mandraguna' },
+    { e: '🐔', n: 'Ayam Jago Cindelaras' }, { e: '🦇', n: 'Kelelawar Senja' },
+    { e: '🐸', n: 'Kodok Emas' },       { e: '🦈', n: 'Hiu Laut Kidul' },
+    { e: '🐜', n: 'Semut Merah (kodam ekonomis)' }, { e: '🐌', n: 'Siput Santai (sabar orangnya)' },
+    { e: '🦆', n: 'Bebek Perkasa' },    { e: '🐛', n: 'Ulat Bulu Keramat' },
+    { e: '🦄', n: 'Kuda Poni Pelangi' }, { e: '🦖', n: 'T-Rex Purba' },
+  ];
+  const kodamEl = document.getElementById('kodam');
+  const kodamEmoji = document.getElementById('kodam-emoji');
+  const kodamName = document.getElementById('kodam-name');
+  const kodamUser = document.getElementById('kodam-user');
+  const kodamCache = new Map();   // user -> kodam (konsisten per user per session)
+  let lastKodam = 0;
+
+  // hash sederhana: username sama = kodam sama (biar ngga bisa di-reroll)
+  function hashStr(s) {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    return Math.abs(h);
+  }
+  function cmdKodam(user) {
+    const now = Date.now();
+    if (now - lastKodam < 7000) return;  // antrian biar ngga numpuk
+    lastKodam = now;
+    let k = kodamCache.get(user);
+    if (!k) {
+      k = KODAMS[hashStr(user) % KODAMS.length];
+      kodamCache.set(user, k);
+    }
+    document.getElementById('kodam-title').textContent = '✦ Kodam Terdeteksi ✦';
+    kodamName.style.fontSize = '';
+    kodamEmoji.textContent = k.e;
+    kodamName.textContent = k.n;
+    kodamUser.innerHTML = 'kodam milik <b></b>';
+    kodamUser.querySelector('b').textContent = '@' + user;
+    kodamEl.classList.remove('show');
+    void kodamEl.offsetWidth;
+    kodamEl.classList.add('show');
+    // aura mistis
+    for (let i = 0; i < 14; i++) {
+      const p = document.createElement('div');
+      p.className = 'aura';
+      p.textContent = ['✨', '🔮', '💫'][i % 3];
+      const ang = (Math.PI * 2 * i) / 14;
+      const dist = 18 + Math.random() * 14;
+      p.style.setProperty('--dx', Math.cos(ang) * dist + 'vw');
+      p.style.setProperty('--dy', Math.sin(ang) * dist + 'vw');
+      p.style.setProperty('--rot', (Math.random() * 180 - 90) + 'deg');
+      document.getElementById('stage').appendChild(p);
+      setTimeout(() => p.remove(), 1700);
+    }
+  }
+
+  // ---------- cek nasib ----------
+  const NASIBS = [
+    { e: '💰', n: 'Rezeki nomplok minggu ini, siap-siap!' },
+    { e: '💸', n: 'Dompet aman... asal ngga checkout tengah malam' },
+    { e: '❤️', n: 'Ada yang diam-diam merhatiin kamu lho' },
+    { e: '💔', n: 'Mantan bakal muncul di FYP, kuat-kuatin ya' },
+    { e: '🚀', n: 'Karier melesat, jangan lupa yang di bawah' },
+    { e: '🛏️', n: 'Nasibmu: rebahan tetap juara' },
+    { e: '🍀', n: 'Hoki gede! Cocok mulai hal baru hari ini' },
+    { e: '☔', n: 'Ada ujian kecil, tapi kamu pasti lolos' },
+    { e: '🌟', n: 'Bakal jadi pusat perhatian dalam waktu dekat' },
+    { e: '🍜', n: 'Rezekimu datang lewat makanan enak' },
+    { e: '📈', n: 'Cuan naik pelan tapi pasti, sabar ya' },
+    { e: '🧲', n: 'Aura magnet jodoh lagi kuat-kuatnya' },
+    { e: '🐢', n: 'Semua indah pada waktunya, jangan buru-buru' },
+    { e: '⚡', n: 'Energi besar! Selesaikan yang tertunda' },
+    { e: '🎁', n: 'Kejutan menyenangkan menanti akhir pekan' },
+    { e: '🌧️', n: 'Galau dikit boleh, tapi jangan lama-lama' },
+    { e: '👑', n: 'Titisan sultan, tinggal nunggu waktu' },
+    { e: '🤫', n: 'Ada rahasia yang sebentar lagi terbongkar' },
+    { e: '🧿', n: 'Dijauhkan dari orang toxic, aman!' },
+    { e: '🔥', n: 'Semangatmu menular, orang sekitar ikut bahagia' },
+    { e: '🌈', n: 'Setelah gelap terbitlah terang, bentar lagi!' },
+    { e: '😴', n: 'Butuh tidur cukup, nasib bagus nunggu besok' },
+  ];
+  const nasibCache = new Map();
+  function cmdNasib(user) {
+    const now = Date.now();
+    if (now - lastKodam < 7000) return;  // share antrian dengan kodam biar ngga tumpuk
+    lastKodam = now;
+    let n = nasibCache.get(user);
+    if (!n) {
+      // hash + tanggal: nasib konsisten per user per HARI (besok bisa beda)
+      const today = new Date().toISOString().slice(0, 10);
+      n = NASIBS[hashStr(user + today) % NASIBS.length];
+      nasibCache.set(user, n);
+    }
+    document.getElementById('kodam-title').textContent = '✦ Ramalan Nasib ✦';
+    kodamEmoji.textContent = n.e;
+    kodamName.textContent = n.n;
+    kodamName.style.fontSize = '4vw';
+    kodamUser.innerHTML = 'nasib <b></b> hari ini';
+    kodamUser.querySelector('b').textContent = '@' + user;
+    kodamEl.classList.remove('show');
+    void kodamEl.offsetWidth;
+    kodamEl.classList.add('show');
+    for (let i = 0; i < 14; i++) {
+      const p = document.createElement('div');
+      p.className = 'aura';
+      p.textContent = ['🔮', '⭐', '✨'][i % 3];
+      const ang = (Math.PI * 2 * i) / 14;
+      const dist = 18 + Math.random() * 14;
+      p.style.setProperty('--dx', Math.cos(ang) * dist + 'vw');
+      p.style.setProperty('--dy', Math.sin(ang) * dist + 'vw');
+      p.style.setProperty('--rot', (Math.random() * 180 - 90) + 'deg');
+      document.getElementById('stage').appendChild(p);
+      setTimeout(() => p.remove(), 1700);
+    }
+  }
+
+  // ---------- PK prediction (tebak pemenang PK) ----------
+  const pkEl = document.getElementById('pk');
+  const pkTeams = pkEl.querySelectorAll('.pk-team');
+  const pkResult = document.getElementById('pk-result');
+  const pkCorrect = document.getElementById('pk-correct');
+  const pkState = {
+    active: false,
+    battleId: '',
+    teams: [ { name: 'Tim Kiri', score: 0 }, { name: 'Tim Kanan', score: 0 } ],
+    votes: [0, 0],
+    voters: new Map(),   // key -> { uniqueId, teamIndex }
+    hideTimer: null,
+  };
+
+  function pkNameFromRaw(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const direct = raw.teamName || raw.name || raw.nickname || raw.hostName || raw.displayName;
+    if (typeof direct === 'string' && direct.trim()) return direct.trim();
+    const host = raw.hostUser || raw.host || raw.anchor;
+    if (host && typeof host === 'object') {
+      const hn = host.nickname || host.uniqueId || host.name;
+      if (typeof hn === 'string' && hn.trim()) return hn.trim();
+    }
+    const users = raw.users || raw.contributors || raw.members;
+    if (Array.isArray(users) && users.length) {
+      const first = (users[0] && (users[0].user || users[0])) || {};
+      const un = first.nickname || first.uniqueId || first.name;
+      if (typeof un === 'string' && un.trim()) return un.trim();
+    }
+    return null;
+  }
+
+  function pkOpen(battleId, teams) {
+    pkState.active = true;
+    pkState.battleId = battleId;
+    pkState.votes = [0, 0];
+    pkState.voters = new Map();
+    teams.forEach((t, i) => {
+      pkState.teams[i] = { name: t.name || (i ? 'Tim Kanan' : 'Tim Kiri'), score: t.score || 0 };
+    });
+    pkResult.classList.remove('show');
+    pkResult.textContent = '';
+    pkCorrect.textContent = '';
+    pkTeams.forEach(el => el.classList.remove('win'));
+    pkRender();
+    pkEl.classList.add('show');
+    clearTimeout(pkState.hideTimer);
+  }
+
+  function pkRender() {
+    const total = pkState.votes[0] + pkState.votes[1];
+    pkTeams.forEach((el) => {
+      const idx = Number(el.dataset.team);
+      const t = pkState.teams[idx];
+      el.querySelector('.pname').textContent = t.name;
+      el.querySelector('.pscore').textContent = t.score.toLocaleString('id-ID') + ' 💎';
+      const pct = total ? Math.round((pkState.votes[idx] / total) * 100) : 0;
+      el.querySelector('.pk-fill').style.width = pct + '%';
+      el.querySelector('.pk-votes b').textContent = pkState.votes[idx];
+    });
+  }
+
+  function pkVote(user, teamIndex) {
+    if (!pkState.active || teamIndex < 0 || teamIndex > 1) return;
+    const key = user.userId || user.uniqueId || '';
+    const uniqueId = user.uniqueId || key;
+    const prev = pkState.voters.get(key);
+    if (prev && prev.teamIndex === teamIndex) return; // vote sama → abaikan
+    if (prev) pkState.votes[prev.teamIndex] = Math.max(0, pkState.votes[prev.teamIndex] - 1);
+    pkState.voters.set(key, { uniqueId, teamIndex });
+    pkState.votes[teamIndex]++;
+    pkRender();
+  }
+
+  function pkClose(scores) {
+    if (!pkState.active) return;
+    if (Array.isArray(scores)) {
+      scores.forEach((s, i) => { if (i < 2 && typeof s === 'number') pkState.teams[i].score = s; });
+    }
+    pkState.active = false;
+    const [l, r] = pkState.teams;
+    const winner = l.score > r.score ? 0 : r.score > l.score ? 1 : -1;
+    if (winner >= 0) {
+      pkTeams[winner].classList.add('win');
+      pkResult.textContent = '🏆 ' + pkState.teams[winner].name + ' MENANG!';
+    } else {
+      pkResult.textContent = '🤝 SERI!';
+    }
+    pkResult.classList.add('show');
+    const correct = [...pkState.voters.values()].filter(v => v.teamIndex === winner).map(v => '@' + v.uniqueId);
+    pkCorrect.textContent = correct.length ? 'Benar: ' + correct.join(', ') : '';
+    pkRender();
+    pkState.hideTimer = setTimeout(() => pkEl.classList.remove('show'), 9000);
+  }
+
+  // ---------- kata pemicu natural (tanpa harus !command) ----------
+  const TRIGGERS = [
+    { re: /hujan|rain/i,             fn: () => cmdRain() },
+    { re: /\b(gas+|mantap|keren|goks|gokil)\b/i, fn: () => { floatEmoji('🔥'); floatEmoji('🔥'); } },
+    { re: /\b(w+k+w+k+\w*|ha(ha)+|ngakak|lol|wkwk)\b/i, fn: () => { floatEmoji('😂'); floatEmoji('🤣'); } },
+    { re: /\b(halo|hai|hello|assalamualaikum|permisi|nyimak)\b/i, fn: () => floatEmoji('👋') },
+    { re: /\b(sayang|cinta|love|suka)\b/i,       fn: () => { floatEmoji('❤️'); floatEmoji('💕'); } },
+    { re: /\b(semangat|ayo|ayok|gaskeun)\b/i,    fn: () => floatEmoji('💪') },
+  ];
+
+  function onChat(user, comment) {
+    const c = (comment || '').trim();
+    const lower = c.toLowerCase();
+
+    // command eksplisit tetap jalan
+    if (lower === '!hujan' || lower === '!rain') { cmdRain(); addHype(6); return; }
+    if (lower.startsWith('!sapa ')) { cmdShout(user, c.slice(6)); addHype(6); return; }
+    if (/\b(cek\s*kodam|kodam|!kodam)\b/i.test(lower)) { cmdKodam(user); addHype(6); return; }
+    if (/\b(cek\s*nasib|nasib|ramal|!nasib)\b/i.test(lower)) { cmdNasib(user); addHype(6); return; }
+
+    // PK prediction vote
+    if (/^!(pilih|tebak|vote|pk)\s+\S+/.test(lower)) {
+      const arg = c.split(/\s+/)[1] || '';
+      const a = arg.toLowerCase();
+      let idx = -1;
+      if (a === '1') idx = 0; else if (a === '2') idx = 1;
+      else if (['kiri', 'left', 'merah', 'a'].includes(a)) idx = 0;
+      else if (['kanan', 'right', 'biru', 'b'].includes(a)) idx = 1;
+      if (idx >= 0) { pkVote(user, idx); addHype(4); return; }
+    }
+
+    // emoji apapun di komentar → terbang di layar
+    const emojis = c.match(EMOJI_RE);
+    if (emojis) emojis.slice(0, 3).forEach((e, i) => setTimeout(() => floatEmoji(e), i * 150));
+
+    // kata natural → efek otomatis
+    for (const t of TRIGGERS) {
+      if (t.re.test(lower)) { t.fn(); break; }
+    }
+
+    // setiap chat menaikkan hype
+    addHype(emojis ? 5 : 3);
+  }
+
+  // ---------- websocket ----------
+  const statusEl = document.getElementById('status');
+  const statusText = document.getElementById('status-text');
+  let ws, retry = 0;
+
+  function handleMessage(evt) {
+    let msg;
+    try { msg = JSON.parse(evt.data); } catch { return; }
+    const d = msg.data || {};
+    const user = d.user?.uniqueId || '';
+    switch (msg.event) {
+      case 'gift': {
+        // count only when repeat streak ends (or non-streakable gift)
+        if (d.giftType === 1 && !d.repeatEnd) break;
+        const diamonds = (d.diamondCount || 0) * (d.repeatCount || 1);
+        if (diamonds <= 0) break;
+        updateGoal(diamonds);
+        updateBoard(user, diamonds);
+        enqueueAlert(user, d.giftName || 'Gift', diamonds);
+        break;
+      }
+      case 'like':
+        onLike(d.likeCount || 1, d.totalLikes);
+        break;
+      case 'member':
+        onMember(user);
+        break;
+      case 'chat':
+        onChat(user, d.comment);
+        break;
+      case 'battle': {
+        const st = d.status;
+        if (st === 2 || st === 1) {
+          const bId = d.battleId || 'pk';
+          const teams = (d.teams || []).map((raw, i) => ({
+            name: pkNameFromRaw(raw) || (i ? 'Tim Kanan' : 'Tim Kiri'),
+            score: Number((d.scores || [])[i] ?? (raw && raw.score) ?? 0) || 0,
+          }));
+          if (!pkState.active) {
+            pkOpen(bId, teams);
+          } else if (st === 1 && Array.isArray(d.scores)) {
+            d.scores.forEach((s, i) => { if (i < 2 && typeof s === 'number') pkState.teams[i].score = s; });
+            pkRender();
+          }
+        } else if (st === 3) {
+          pkClose(d.scores);
+        }
+        break;
+      }
+      case 'battleArmies': {
+        if (!pkState.active) break;
+        const hosts = d.hosts || [];
+        if (hosts.length) {
+          hosts.forEach((h) => {
+            if (h.teamIdx < 0 || h.teamIdx > 1) return;
+            const t = pkState.teams[h.teamIdx];
+            if (!t) return;
+            if (typeof h.teamTotalScore === 'number') t.score = h.teamTotalScore;
+            if (h.contributors && h.contributors[0] && h.contributors[0].nickname) t.name = h.contributors[0].nickname;
+          });
+        } else {
+          (d.teams || []).forEach((raw, i) => {
+            const t = pkState.teams[i];
+            if (!t) return;
+            if (raw && typeof raw.score === 'number') t.score = raw.score;
+            const n = pkNameFromRaw(raw);
+            if (n) t.name = n;
+          });
+        }
+        pkRender();
+        break;
+      }
+    }
+  }
+
+  // demo mode: no real connection, events injected by demo.html
+  if (API_KEY === 'demo') {
+    window.__onmsg = handleMessage;
+    statusEl.classList.add('on');
+    statusText.textContent = 'DEMO MODE';
+    return;
+  }
+
+  function connect() {
+    statusText.textContent = 'connecting…';
+    ws = new WebSocket(`wss://api.tik.tools?uniqueId=${encodeURIComponent(USERNAME)}&apiKey=${encodeURIComponent(API_KEY)}`);
+
+    ws.onopen = () => {
+      retry = 0;
+      statusEl.classList.add('on');
+      statusText.textContent = '@' + USERNAME;
+    };
+    ws.onmessage = handleMessage;
+    ws.onclose = () => {
+      statusEl.classList.remove('on');
+      statusText.textContent = 'reconnecting…';
+      setTimeout(connect, Math.min(30000, 1000 * 2 ** retry++));
+    };
+  }
+  connect();
+})();
+</script>
+</body>
+</html>

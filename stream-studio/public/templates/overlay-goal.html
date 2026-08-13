@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stream Studio — Goal Crusher</title>
+<script src="./demo.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* Stream Studio · template: goal · genre: goal-focused · theme: transparent overlay */
+:root {
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --ink: oklch(98% 0.01 90);
+  --ink-dim: oklch(80% 0.02 90);
+  --panel: oklch(15% 0.02 280 / 0.72);
+  --panel-edge: oklch(60% 0.05 280 / 0.35);
+  --accent: oklch(85% 0.16 90);
+  --accent-2: oklch(75% 0.19 350);
+  --goal-fill: linear-gradient(90deg, oklch(75% 0.19 350), oklch(85% 0.16 90));
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; font-family: var(--font-display); color: var(--ink); }
+
+#stage { position: fixed; inset: 0; }
+
+/* ---------- goal bar ---------- */
+#goal {
+  position: absolute;
+  top: 6%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 88vw;
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 18px;
+  padding: 2.4vw 3.5vw;
+  backdrop-filter: blur(6px);
+}
+#goal-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1.2vw; }
+#goal-title { font-size: 3.4vw; font-weight: 700; letter-spacing: -0.01em; }
+#goal-count { font-family: var(--font-mono); font-size: 3vw; color: var(--ink-dim); }
+#goal-count b { color: var(--accent); font-weight: 700; }
+#goal-track { height: 1.6vw; border-radius: 999px; background: oklch(98% 0.01 90 / 0.12); overflow: hidden; }
+#goal-fill { height: 100%; width: 0%; background: var(--goal-fill); border-radius: 999px; transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+#goal.complete #goal-track { box-shadow: 0 0 0 3px oklch(85% 0.16 90 / 0.5); animation: goalPulse 0.8s ease-in-out 3; }
+@keyframes goalPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+
+/* ---------- leaderboard ---------- */
+#board {
+  position: absolute;
+  left: 4vw;
+  bottom: 10%;
+  width: 34vw;
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 16px;
+  padding: 2.2vw 2.6vw;
+  backdrop-filter: blur(6px);
+}
+#board-title { font-size: 2.2vw; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent); margin-bottom: 1.6vw; }
+#board-list { list-style: none; display: flex; flex-direction: column; gap: 0.9vw; }
+#board-list li { display: flex; align-items: center; gap: 1.4vw; font-size: 2.1vw; }
+#board-list li.empty { color: var(--ink-dim); opacity: 0.7; }
+.rank { width: 3vw; font-family: var(--font-mono); font-weight: 700; text-align: center; flex-shrink: 0; }
+.gname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.gdiam { font-family: var(--font-mono); color: var(--accent); font-weight: 700; }
+li.bump .gname { color: var(--accent-2); }
+
+/* ---------- minimal gift alert ---------- */
+#alert {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%) translateY(30px);
+  opacity: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 2vw;
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 999px;
+  padding: 1.6vw 3.4vw;
+  transition: opacity 0.35s, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+#alert.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#alert-emoji { font-size: 6vw; }
+#alert-body { display: flex; flex-direction: column; }
+#alert-name { font-size: 2.6vw; font-weight: 700; color: var(--accent-2); }
+#alert-gift { font-size: 2vw; color: var(--ink-dim); }
+#alert-gift b { color: var(--accent); }
+
+/* ---------- status ---------- */
+#status { position: absolute; top: 3%; right: 3%; display: flex; align-items: center; gap: 0.8vw; font-family: var(--font-mono); font-size: 1.8vw; color: var(--ink-dim); opacity: 0.85; }
+#status .dot { width: 1.4vw; height: 1.4vw; border-radius: 50%; background: oklch(70% 0.19 25); }
+#status.on .dot { background: oklch(70% 0.17 155); box-shadow: 0 0 0 3px oklch(70% 0.17 155 / 0.3); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="status"><span class="dot"></span><span id="status-text">connecting…</span></div>
+
+  <div id="goal">
+    <div id="goal-head">
+      <span id="goal-title">Target Hari Ini</span>
+      <span id="goal-count"><b id="goal-cur">0</b> / <span id="goal-max">0</span> 💎</span>
+    </div>
+    <div id="goal-track"><div id="goal-fill"></div></div>
+  </div>
+
+  <div id="board">
+    <div id="board-title">Top Supporters</div>
+    <ol id="board-list"><li class="empty">Menunggu gift pertama…</li></ol>
+  </div>
+
+  <div id="alert">
+    <span id="alert-emoji">🎁</span>
+    <div id="alert-body">
+      <span id="alert-name">@name</span>
+      <span id="alert-gift">mengirim <b>Gift</b></span>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const qs = new URLSearchParams(location.search)
+  const USERNAME = qs.get('username')
+  const API_KEY = qs.get('apiKey')
+  const GOAL = parseInt(qs.get('goal') || '5000', 10)
+  const GOAL_TITLE = qs.get('goalTitle') || 'Target Hari Ini'
+  const DEMO = qs.get('demo') === '1'
+
+  document.getElementById('goal-title').textContent = GOAL_TITLE
+  document.getElementById('goal-max').textContent = GOAL.toLocaleString('id-ID')
+
+  const gifters = new Map()
+  let goalCur = 0
+  let alertBusy = false
+
+  const goalEl = document.getElementById('goal')
+  const goalFill = document.getElementById('goal-fill')
+  const goalCurEl = document.getElementById('goal-cur')
+  function updateGoal(add) {
+    goalCur += add
+    goalCurEl.textContent = goalCur.toLocaleString('id-ID')
+    goalFill.style.width = Math.min(100, (goalCur / GOAL) * 100) + '%'
+    if (goalCur >= GOAL && !goalEl.classList.contains('complete')) goalEl.classList.add('complete')
+  }
+
+  const boardList = document.getElementById('board-list')
+  function updateBoard(user, diamonds) {
+    gifters.set(user, (gifters.get(user) || 0) + diamonds)
+    const top = [...gifters.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
+    boardList.innerHTML = ''
+    const medals = ['👑', '2', '3', '4', '5']
+    top.forEach(([name, d], i) => {
+      const li = document.createElement('li')
+      li.innerHTML = `<span class="rank">${medals[i]}</span><span class="gname"></span><span class="gdiam">${d.toLocaleString('id-ID')} 💎</span>`
+      li.querySelector('.gname').textContent = name
+      if (name === user) li.classList.add('bump')
+      boardList.appendChild(li)
+    })
+  }
+
+  const alertEl = document.getElementById('alert')
+  const aEmoji = document.getElementById('alert-emoji')
+  const aName = document.getElementById('alert-name')
+  const aGift = document.getElementById('alert-gift')
+  const tierEmoji = (d) => (d >= 1000 ? '👑' : d >= 100 ? '🚀' : d >= 10 ? '💝' : '🎁')
+  function showAlert(user, giftName, diamonds) {
+    aEmoji.textContent = tierEmoji(diamonds)
+    aName.textContent = '@' + user
+    aGift.innerHTML = 'mengirim <b></b>'
+    aGift.querySelector('b').textContent = `${giftName} · ${diamonds.toLocaleString('id-ID')} 💎`
+    alertEl.classList.remove('show')
+    void alertEl.offsetWidth
+    alertEl.classList.add('show')
+    clearTimeout(showAlert._t)
+    showAlert._t = setTimeout(() => alertEl.classList.remove('show'), 3200)
+  }
+
+  const statusEl = document.getElementById('status')
+  const statusText = document.getElementById('status-text')
+
+  function handleMessage(evt) {
+    let msg
+    try { msg = JSON.parse(evt.data) } catch { return }
+    const d = msg.data || {}
+    const user = d.user?.uniqueId || ''
+    switch (msg.event) {
+      case 'gift': {
+        if (d.giftType === 1 && !d.repeatEnd) break
+        const diamonds = (d.diamondCount || 0) * (d.repeatCount || 1)
+        if (diamonds <= 0) break
+        updateGoal(diamonds)
+        updateBoard(user, diamonds)
+        showAlert(user, d.giftName || 'Gift', diamonds)
+        break
+      }
+    }
+  }
+
+  let ws, retry = 0
+  function connect() {
+    statusText.textContent = 'connecting…'
+    ws = new WebSocket(`wss://api.tik.tools?uniqueId=${encodeURIComponent(USERNAME || '')}&apiKey=${encodeURIComponent(API_KEY || '')}`)
+    ws.onopen = () => { retry = 0; statusEl.classList.add('on'); statusText.textContent = DEMO ? 'DEMO' : '@' + USERNAME }
+    ws.onmessage = handleMessage
+    ws.onclose = () => { statusEl.classList.remove('on'); statusText.textContent = 'reconnecting…'; setTimeout(connect, Math.min(30000, 1000 * 2 ** retry++)) }
+  }
+  connect()
+})()
+</script>
+</body>
+</html>
