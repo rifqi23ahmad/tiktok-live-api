@@ -30,6 +30,17 @@ export { TikTool, TikToolError } from './rest';
 export type { TikToolOptions } from './rest';
 export { TikTokCaptions } from './captions';
 export type { TikTokCaptionsOptions } from './captions';
+export { TikTokPKPredictions } from './predictions';
+export type {
+  TikTokPKPredictionsOptions,
+  TikTokPKPredictionsEventMap,
+  PredictionTeam,
+  PredictionVote,
+  PredictionLeader,
+  PollState,
+  PollResult,
+  PollPhase,
+} from './predictions';
 export type {
   TikTokUser,
   ChatEvent,
@@ -43,6 +54,7 @@ export type {
   TranslationEvent,
   CreditsEvent,
   ConnectedEvent,
+  ReconnectEvent,
   DisconnectedEvent,
   ErrorEvent,
   TikTokLiveEventMap,

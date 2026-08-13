@@ -177,6 +177,15 @@ export interface ConnectedEvent {
   uniqueId: string;
 }
 
+/** Reconnection event payload. */
+export interface ReconnectEvent {
+  uniqueId: string;
+  /** 1-based reconnection attempt number. */
+  attempt: number;
+  /** Delay in ms before this reconnect attempt fires. */
+  delayMs: number;
+}
+
 /** Disconnection event payload. */
 export interface DisconnectedEvent {
   uniqueId: string;
@@ -209,6 +218,7 @@ export interface TikTokLiveEventMap {
   streamEnd: Record<string, unknown>;
   roomInfo: Record<string, unknown>;
   connected: ConnectedEvent;
+  reconnect: ReconnectEvent;
   disconnected: DisconnectedEvent;
   error: ErrorEvent;
   event: Record<string, unknown>;
@@ -224,6 +234,7 @@ export interface TikTokCaptionsEventMap {
   credits_low: CreditsEvent;
   status: Record<string, unknown>;
   connected: ConnectedEvent;
+  reconnect: ReconnectEvent;
   disconnected: DisconnectedEvent;
   error: ErrorEvent;
 }

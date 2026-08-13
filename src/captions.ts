@@ -30,6 +30,12 @@ import type { TikTokCaptionsEventMap } from './types';
 const CAPTIONS_BASE = 'wss://api.tik.tools/captions';
 const VERSION = '1.0.0';
 
+// Terminal server close codes: creator not live / stream ended. Wait on a long
+// fixed backoff so the client picks the stream up once it starts.
+const CODE_NOT_LIVE = 4404;
+const CODE_STREAM_END = 4005;
+const TERMINAL_BACKOFF_MS = 60_000;
+
 /** Options for {@link TikTokCaptions} constructor. */
 export interface TikTokCaptionsOptions {
   /** Your TikTool API key. Get one at https://tik.tools */
@@ -40,6 +46,10 @@ export interface TikTokCaptionsOptions {
   diarization?: boolean;
   /** Auto-disconnect after N minutes (default: 60, max: 300). */
   maxDurationMinutes?: number;
+  /** Auto-reconnect on disconnect (default: true). */
+  autoReconnect?: boolean;
+  /** Max reconnection attempts (default: 5). */
+  maxReconnectAttempts?: number;
 }
 
 type EventHandler<T> = (data: T) => void | Promise<void>;
@@ -69,11 +79,16 @@ export class TikTokCaptions {
   readonly diarization: boolean;
   /** Max session duration in minutes. */
   readonly maxDurationMinutes?: number;
+  /** Whether to auto-reconnect on disconnect. */
+  readonly autoReconnect: boolean;
+  /** Maximum reconnection attempts. */
+  readonly maxReconnectAttempts: number;
 
   private _handlers = new Map<string, Set<EventHandler<any>>>();
   private _ws: WebSocket | null = null;
   private _connected = false;
   private _intentionalClose = false;
+  private _reconnectAttempts = 0;
 
   /**
    * Create a new TikTokCaptions client.
@@ -90,6 +105,8 @@ export class TikTokCaptions {
     this.translate = options.translate;
     this.diarization = options.diarization ?? true;
     this.maxDurationMinutes = options.maxDurationMinutes;
+    this.autoReconnect = options.autoReconnect ?? true;
+    this.maxReconnectAttempts = options.maxReconnectAttempts ?? 5;
   }
 
   /** Whether currently connected and receiving captions. */
@@ -153,6 +170,7 @@ export class TikTokCaptions {
    * @returns Promise that resolves when connected.
    */
   async connect(): Promise<void> {
+    if (this._connected) return;
     this._intentionalClose = false;
     let params = `uniqueId=${this.uniqueId}&apiKey=${this.apiKey}`;
     if (this.translate) params += `&translate=${this.translate}`;
@@ -169,6 +187,7 @@ export class TikTokCaptions {
 
       this._ws.on('open', () => {
         this._connected = true;
+        this._reconnectAttempts = 0;
         this._emit('connected', { uniqueId: this.uniqueId });
         resolve();
       });
@@ -183,9 +202,10 @@ export class TikTokCaptions {
         }
       });
 
-      this._ws.on('close', () => {
+      this._ws.on('close', (code: number) => {
         this._connected = false;
-        this._emit('disconnected', { uniqueId: this.uniqueId });
+        this._emit('disconnected', { uniqueId: this.uniqueId, code });
+        this._maybeReconnect(code);
       });
 
       this._ws.on('error', (err: Error) => {
@@ -203,5 +223,33 @@ export class TikTokCaptions {
       this._ws = null;
     }
     this._connected = false;
+  }
+
+  private async _maybeReconnect(closeCode?: number): Promise<void> {
+    if (
+      this._intentionalClose ||
+      !this.autoReconnect ||
+      this._reconnectAttempts >= this.maxReconnectAttempts
+    ) {
+      return;
+    }
+    this._reconnectAttempts++;
+    const terminal =
+      closeCode === CODE_NOT_LIVE || closeCode === CODE_STREAM_END;
+    const delay = terminal
+      ? TERMINAL_BACKOFF_MS
+      : Math.min(2 ** (this._reconnectAttempts - 1) * 1000, 30_000);
+    this._emit('reconnect', {
+      uniqueId: this.uniqueId,
+      attempt: this._reconnectAttempts,
+      delayMs: delay,
+    });
+    await new Promise((r) => setTimeout(r, delay));
+    if (this._intentionalClose) return;
+    try {
+      await this.connect();
+    } catch {
+      // reconnect will retry
+    }
   }
 }

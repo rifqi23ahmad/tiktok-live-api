@@ -69,10 +69,13 @@ export class TikTokLive {
 
   private _handlers = new Map<string, Set<EventHandler<any>>>();
   private _ws: WebSocket | null = null;
-  private _connected = false;
+  protected _connected = false;
   private _intentionalClose = false;
   private _reconnectAttempts = 0;
   private _eventCount = 0;
+  /** Latest room info (roomId/roomInfo), exposed for the TTLC compatibility layer. */
+  protected _roomInfo: Record<string, unknown> | null = null;
+  protected _roomId = '';
 
   /**
    * Create a new TikTokLive client.
@@ -103,6 +106,33 @@ export class TikTokLive {
   /** Total number of events received this session. */
   get eventCount(): number {
     return this._eventCount;
+  }
+
+  /**
+   * Snapshot of the current connection state (TTLC-compatible shape).
+   *
+   * @example
+   * ```typescript
+   * const state = client.getState();
+   * console.log(state.isConnected, state.roomId, state.uniqueId);
+   * ```
+   */
+  getState(): {
+    isConnected: boolean;
+    upgradedToWebsocket: boolean;
+    roomId: string;
+    roomInfo: Record<string, unknown> | null;
+    availableGifts: unknown[];
+    uniqueId: string;
+  } {
+    return {
+      isConnected: this._connected,
+      upgradedToWebsocket: this._connected,
+      roomId: this._roomId,
+      roomInfo: this._roomInfo,
+      availableGifts: [],
+      uniqueId: this.uniqueId,
+    };
   }
 
   /**
@@ -170,6 +200,7 @@ export class TikTokLive {
    * ```
    */
   async connect(): Promise<void> {
+    if (this._connected) return;
     this._intentionalClose = false;
     const uri = `${WS_BASE}?uniqueId=${this.uniqueId}&apiKey=${this.apiKey}`;
 
@@ -191,6 +222,15 @@ export class TikTokLive {
           this._eventCount++;
           const eventType: string = event.event || 'unknown';
           const data = event.data || event;
+          if (eventType === 'roomInfo' && data && typeof data === 'object') {
+            this._roomInfo = data;
+            this._roomId =
+              String(
+                (data as Record<string, unknown>).roomId ??
+                  (data as Record<string, unknown>).room_id ??
+                  '',
+              ) || '';
+          }
           this._emit('event', event);
           this._emit(eventType, data);
         } catch {
@@ -237,7 +277,13 @@ export class TikTokLive {
     const delay = terminal
       ? TERMINAL_BACKOFF_MS
       : Math.min(2 ** (this._reconnectAttempts - 1) * 1000, 30_000);
+    this._emit('reconnect', {
+      uniqueId: this.uniqueId,
+      attempt: this._reconnectAttempts,
+      delayMs: delay,
+    });
     await new Promise((r) => setTimeout(r, delay));
+    if (this._intentionalClose) return;
     try {
       await this.connect();
     } catch {
