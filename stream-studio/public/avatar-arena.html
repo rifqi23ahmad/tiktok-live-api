@@ -83,10 +83,106 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: transparen
 #war .bar .b { background: linear-gradient(90deg, oklch(70% 0.17 230), oklch(82% 0.15 195)); transition: width 0.5s; }
 #war .lead { text-align: center; font-size: 3vw; font-weight: 700; color: var(--accent2); }
 
+/* ---------- BEYBLADE ARENA ---------- */
+#beyblade { flex: 1; position: relative; display: none; min-height: 0; }
+#beyblade .stadium {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(80% 80% at 50% 50%, oklch(30% 0.05 280) 0%, oklch(20% 0.03 280) 55%, oklch(12% 0.02 280) 100%);
+  border: 0.6vw solid oklch(60% 0.08 280 / 0.5);
+  box-shadow: inset 0 0 4vw oklch(0% 0 0 / 0.6), 0 0 3vw oklch(82% 0.15 195 / 0.15);
+  overflow: hidden;
+}
+#beyblade .stadium.shake { animation: stadiumShake 0.32s ease-in-out; }
+@keyframes stadiumShake {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-0.6vw, 0.4vw); }
+  50% { transform: translate(0.6vw, -0.4vw); }
+  75% { transform: translate(-0.4vw, -0.3vw); }
+}
+#beyblade .stadium-ring { position: absolute; inset: 6%; border-radius: 50%; border: 0.4vw dashed oklch(70% 0.05 280 / 0.35); }
+#beyblade .stadium-core { position: absolute; left: 50%; top: 50%; width: 12vw; height: 12vw; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(60% 60% at 50% 40%, oklch(85% 0.16 90 / 0.25), transparent 70%); pointer-events: none; }
+#beyblade .host-say { position: absolute; top: 6%; left: 50%; transform: translateX(-50%); display: none; align-items: center; gap: 1vw; max-width: 78%; background: oklch(18% 0.03 280 / 0.9); border: 1px solid oklch(60% 0.05 280 / 0.4); border-radius: 999px; padding: 1vw 2vw; z-index: 8; box-shadow: 0 0.6vw 2vw oklch(0% 0 0 / 0.5); animation: bubbleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+#beyblade .host-say-tag { flex-shrink: 0; font-size: 2vw; font-weight: 700; color: #0b0b0b; background: linear-gradient(135deg, var(--gold), var(--accent2)); border-radius: 999px; padding: 0.3vw 1.2vw; }
+#beyblade .host-say-text { font-size: 2.4vw; font-weight: 600; color: oklch(95% 0.02 90); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#beyblade .host-say-dots { display: none; gap: 0.5vw; font-size: 3vw; color: var(--accent2); }
+#beyblade .host-say-dots i { font-style: normal; animation: dotBlink 1s ease-in-out infinite; }
+#beyblade .host-say-dots i:nth-child(2) { animation-delay: 0.15s; }
+#beyblade .host-say-dots i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes dotBlink { 0%, 100% { opacity: 0.25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-0.4vw); } }
+#beyblade .bey {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 16vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 3;
+  will-change: left, top;
+}
+#beyblade .bey.burst { animation: burstOut 0.9s ease-in forwards; }
+@keyframes burstOut {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+  60% { transform: translate(-50%, -50%) scale(1.35) rotate(180deg); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(0.2) rotate(360deg); opacity: 0; }
+}
+#beyblade .bey.clashing .bey-top { filter: drop-shadow(0 0 2vw oklch(85% 0.16 90)); }
+#beyblade .bey-top { position: relative; width: 9vw; height: 9vw; }
+#beyblade .bey-rotor { position: absolute; inset: 0; animation: beySpin linear infinite; animation-duration: var(--spin-dur, 1.4s); will-change: transform; }
+@keyframes beySpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+#beyblade .bey-blade {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    oklch(88% 0.03 280) 0deg 16deg,
+    oklch(45% 0.07 280) 16deg 34deg,
+    oklch(78% 0.04 280) 34deg 44deg
+  );
+  box-shadow: inset 0 0 0.6vw oklch(0% 0 0 / 0.55), 0 0 1.6vw oklch(82% 0.15 195 / 0.35);
+  filter: drop-shadow(0 0 1vw oklch(82% 0.15 195 / 0.4));
+}
+#beyblade .bey.host .bey-blade {
+  background: repeating-conic-gradient(
+    oklch(85% 0.16 90) 0deg 16deg,
+    oklch(55% 0.1 90) 16deg 34deg,
+    oklch(82% 0.15 195) 34deg 44deg
+  );
+}
+#beyblade .bey-avatar {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 58%;
+  height: 58%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  object-fit: cover;
+  border: 0.4vw solid oklch(88% 0.02 280);
+  background: oklch(25% 0.03 280);
+  box-shadow: 0 0 1.6vw oklch(0% 0 0 / 0.55);
+  display: block;
+}
+#beyblade .bey.host .bey-avatar { border-color: var(--gold); box-shadow: 0 0 2.4vw oklch(85% 0.16 90 / 0.5); }
+#beyblade .bey-crown { position: absolute; top: -40%; left: 50%; transform: translateX(-50%); font-size: 4.5vw; z-index: 5; filter: drop-shadow(0 0 1vw oklch(85% 0.16 90 / 0.6)); }
+#beyblade .bey-comment { position: absolute; top: -78%; left: 50%; transform: translateX(-50%); background: #fff; color: #111; font-size: 2vw; font-weight: 700; padding: 0.5vw 1.2vw; border-radius: 1.4vw; max-width: 20vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 0.5vw 2vw oklch(0% 0 0 / 0.5); z-index: 6; }
+#beyblade .bey-nameplate { margin-top: 0.5vw; max-width: 100%; font-size: 1.9vw; font-weight: 700; color: oklch(95% 0.02 90); background: oklch(20% 0.03 280 / 0.85); border-radius: 999px; padding: 0.3vw 1vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#beyblade .bey-nameplate.host { color: #0b0b0b; background: linear-gradient(135deg, var(--gold), var(--accent2)); }
+#beyblade .bey-bar { margin-top: 0.4vw; width: 10vw; height: 1.6vw; border-radius: 999px; background: oklch(28% 0.03 280 / 0.8); border: 1px solid oklch(60% 0.05 280 / 0.25); overflow: hidden; }
+#beyblade .bey-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, oklch(70% 0.2 25), oklch(75% 0.19 350)); transition: width 0.4s; }
+#beyblade .bey.host .bey-bar-fill { background: linear-gradient(90deg, var(--gold), var(--accent2)); }
+#beyblade .bey-power { margin-top: 0.3vw; font-family: var(--font-mono); font-size: 1.8vw; font-weight: 700; color: var(--gold); }
+#beyblade .bey-win { position: absolute; inset: 0; display: grid; place-items: center; font-size: 4.4vw; font-weight: 700; color: var(--gold); background: oklch(10% 0.02 280 / 0.55); z-index: 10; text-align: center; }
+
 /* status pill */
 #status { position: absolute; top: 1.2%; right: 2.5vw; font-family: var(--font-mono); font-size: 1.8vw; color: var(--ink-dim); background: var(--panel); border-radius: 999px; padding: 0.5vw 1.5vw; display: flex; align-items: center; gap: 0.8vw; z-index: 20; }
 #status .dot { width: 1.2vw; height: 1.2vw; border-radius: 50%; background: oklch(65% 0.2 25); }
 #status.on .dot { background: oklch(75% 0.18 150); }
+
+/* sfx toggle */
+#sfx-btn { position: fixed; top: 1.2%; left: 2.5vw; z-index: 30; font-family: var(--font-mono); font-size: 1.8vw; font-weight: 700; color: var(--ink); background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 999px; padding: 0.5vw 1.5vw; cursor: pointer; }
+#sfx-btn.on { color: var(--gold); border-color: oklch(85% 0.16 90 / 0.5); }
 
 /* demo panel */
 #demo-panel { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; width: 96vw; z-index: 30; }
@@ -109,11 +205,13 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: transparen
     <h1>👥 Avatar Arena — Viewer Characters</h1>
     <p>Penonton yang join tampil sebagai karakter dari foto profilnya. Buka dengan parameter URL:</p>
     <p><code>avatar-arena.html?username=USERNAME&apiKey=API_KEY</code></p>
-    <p>Mode: <code>&mode=arena</code> (default), <code>&mode=marble</code> (Avatar Race), <code>&mode=war</code> (Avatar War).</p>
+    <p>Mode: <code>&mode=beyblade</code> (default), <code>&mode=arena</code> (Audience Arena), <code>&mode=marble</code> (Avatar Race), <code>&mode=war</code> (Avatar War).</p>
     <p style="margin-top:12px">Tanpa parameter (atau <code>apiKey=demo</code>) overlay berjalan dalam <b>mode simulasi</b> dengan tombol demo di bawah.</p>
     <button onclick="enterDemo()">▶ Buka Demo</button>
   </div>
 </div>
+
+<button id="sfx-btn" onclick="toggleSfx()" title="Aktifkan suara">🔇 Suara mati</button>
 
 <div id="stage">
   <div id="hud">
@@ -127,6 +225,8 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: transparen
 
   <div id="war"></div>
 
+  <div id="beyblade"></div>
+
   <div id="status"><span class="dot"></span><span id="status-text">connecting…</span></div>
 
   <div id="demo-panel">
@@ -136,7 +236,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: transparen
     <button onclick="demoGift(20)">🎁 Gift kecil</button>
     <button onclick="demoGift(1500)">👑 Gift SULTAN</button>
     <button class="alt" onclick="demoFollow()">➕ Follow</button>
-    <button class="ghost" onclick="setMode(MODE === 'arena' ? 'marble' : MODE === 'marble' ? 'war' : 'arena')">⇄ Ganti mode</button>
+    <button class="ghost" onclick="setMode(MODE === 'beyblade' ? 'arena' : MODE === 'arena' ? 'marble' : MODE === 'marble' ? 'war' : 'beyblade')">⇄ Ganti mode</button>
   </div>
 </div>
 
@@ -147,12 +247,12 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: transparen
   const API_KEY = qs.get('apiKey');
   const hasCreds = !!USERNAME && !!API_KEY && API_KEY !== 'demo';
   const DEMO = !hasCreds || qs.get('demo') === '1';
-  let MODE = (qs.get('mode') === 'marble' || qs.get('mode') === 'war') ? qs.get('mode') : 'arena';
+  let MODE = (qs.get('mode') === 'arena' || qs.get('mode') === 'marble' || qs.get('mode') === 'war') ? qs.get('mode') : 'beyblade';
 
   const $ = (id) => document.getElementById(id);
   const el = {
     stage: $('stage'), setup: $('setup'), demo: $('demo-panel'),
-    arena: $('arena'), marble: $('marble'), war: $('war'),
+    arena: $('arena'), marble: $('marble'), war: $('war'), beyblade: $('beyblade'),
     hudTitle: $('hud-title'), hudSub: $('hud-sub'), hudCount: $('hud-count'),
     status: $('status'), statusText: $('status-text')
   };
@@ -160,6 +260,61 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: transparen
   const MAX_CHARS = 12;
   const chars = new Map(); // key -> { el, wrap, img, bubble, hearts, crown, confetti, follow, timers }
   const timers = new Map();
+
+  // ---------------------------------------------------------------------
+  // SFX (synthesized Web Audio — no audio files). Off by default: browser
+  // sources auto-mute, so the streamer clicks the "🔇" toggle once to enable.
+  // ---------------------------------------------------------------------
+  let sfxEnabled = false;
+  let sfxCtx = null;
+  function sfxEnsure() {
+    if (!sfxCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      sfxCtx = new AC();
+    }
+    if (sfxCtx.state === 'suspended') sfxCtx.resume();
+    return sfxCtx;
+  }
+  function sfxTone(wave, freq, dur, gain, when, glideTo) {
+    const ac = sfxEnsure(); if (!ac) return;
+    const t0 = ac.currentTime + (when || 0);
+    const o = ac.createOscillator(); const g = ac.createGain();
+    o.type = wave; o.frequency.setValueAtTime(freq, t0);
+    if (glideTo) o.frequency.exponentialRampToValueAtTime(Math.max(20, glideTo), t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0001, gain), t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g).connect(ac.destination); o.start(t0); o.stop(t0 + dur + 0.06);
+  }
+  function sfxNoise(dur, freq, gain) {
+    const ac = sfxEnsure(); if (!ac) return;
+    const t0 = ac.currentTime;
+    const len = Math.max(1, Math.floor(ac.sampleRate * dur));
+    const buf = ac.createBuffer(1, len, ac.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const s = ac.createBufferSource(); s.buffer = buf;
+    const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = 1;
+    const g = ac.createGain(); g.gain.value = gain;
+    s.connect(f).connect(g).connect(ac.destination); s.start(t0);
+  }
+  const SFX = {
+    coin() { sfxTone('sine', 880, 0.14, 0.2, 0); sfxTone('sine', 1318, 0.16, 0.2, 0.07); },
+    fanfare() { [523, 659, 784, 1046].forEach((f, i) => sfxTone('sawtooth', f, 0.26, 0.12, i * 0.1)); },
+    tada() { [523, 659, 784, 1046].forEach((f, i) => sfxTone('sawtooth', f, 0.5, 0.12, i * 0.02)); sfxNoise(0.4, 2500, 0.06); },
+    boom() { sfxTone('sine', 150, 0.4, 0.3, 0, 48); sfxNoise(0.35, 220, 0.16); },
+    whoosh() { sfxTone('sine', 400, 0.22, 0.14, 0, 900); sfxNoise(0.22, 1800, 0.05); },
+    sparkle() { [1046, 1318, 1568, 2093].forEach((f, i) => sfxTone('sine', f, 0.16, 0.12, i * 0.055)); },
+    heart() { sfxTone('sine', 523, 0.18, 0.15, 0); sfxTone('sine', 659, 0.18, 0.15, 0.09); },
+    join() { sfxTone('sine', 400, 0.18, 0.12, 0, 720); }
+  };
+  function sfxPlay(name) { if (!sfxEnabled) return; (SFX[name] || SFX.coin)(); }
+  window.toggleSfx = function () {
+    const btn = $('sfx-btn');
+    if (sfxEnabled) { sfxEnabled = false; btn.textContent = '🔇 Suara mati'; btn.classList.remove('on'); }
+    else { sfxEnabled = true; sfxEnsure(); btn.textContent = '🔊 Suara aktif'; btn.classList.add('on'); sfxPlay('coin'); }
+  };
 
   function clearTimers(key) {
     const t = timers.get(key);
@@ -320,34 +475,43 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: transparen
   function onMember(d) {
     const { user, nickname, avatarUrl } = userInfo(d);
     ensureChar(user, nickname, avatarUrl);
+    sfxPlay('join');
+    if (MODE === 'beyblade') beyMember(user, nickname, avatarUrl);
   }
   function onChat(d) {
     const { user, nickname, avatarUrl } = userInfo(d);
     const c = ensureChar(user, nickname, avatarUrl);
     const text = ((d && d.comment) || '').trim().slice(0, 60);
     if (text) showBubble(c, text);
+    if (MODE === 'beyblade') beyChat(user, nickname, avatarUrl, (d && d.comment) || '');
   }
   function onLike(d) {
     const { user, nickname, avatarUrl } = userInfo(d);
     const c = ensureChar(user, nickname, avatarUrl);
     showHearts(c, Math.min(12, Math.min((d && d.likeCount) || 1, 6)));
+    sfxPlay('sparkle');
+    if (MODE === 'beyblade') beyLike(user, nickname, avatarUrl, (d && d.likeCount) || 1);
   }
   function onGift(d) {
     const { user, nickname, avatarUrl } = userInfo(d);
     const c = ensureChar(user, nickname, avatarUrl);
     const diamonds = (d && d.diamondCount) || 1;
     const big = diamonds >= 100;
+    sfxPlay(big ? 'tada' : 'coin');
     c.wrap.style.transform = 'scale(' + (big ? 1.6 : 1.25) + ')';
     showCrown(c, big);
     clearTimers(c.rootKey);
     timers.set(c.rootKey, setTimeout(() => hideCrown(c), big ? 5000 : 2600));
     if (MODE === 'marble') advanceMarble();
     if (MODE === 'war') updateWar(d);
+    if (MODE === 'beyblade') beyGift(user, nickname, avatarUrl, diamonds);
   }
   function onFollow(d) {
     const { user, nickname, avatarUrl } = userInfo(d);
     const c = ensureChar(user, nickname, avatarUrl);
     showFollow(c);
+    sfxPlay('heart');
+    if (MODE === 'beyblade') beyFollow(user, nickname, avatarUrl);
   }
 
   // ---------------------------------------------------------------------
@@ -405,9 +569,11 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: transparen
     const i = Math.floor(Math.random() * LANES);
     const r = racers[i];
     r.pos = Math.min(100, r.pos + 2 + Math.random() * 9);
+    sfxPlay('whoosh');
     if (r.node) r.node.style.left = r.pos + '%';
     if (r.pos >= 100 && r.user) {
       raceWinner = r.user;
+      sfxPlay('tada');
       el.marble.insertAdjacentHTML('beforeend', '<div class="win">🏆 @' + escapeHtml(r.user) + ' menang!</div>');
       setTimeout(() => { racers = defaultRacers(); raceWinner = null; buildMarble(); }, 4000);
     }
@@ -466,6 +632,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: transparen
     const { user, nickname, avatarUrl } = userInfo(d);
     const diamonds = (d && d.diamondCount) || 1;
     const side = hashStr(user) % 2 === 0 ? 'a' : 'b';
+    sfxPlay('coin');
     if (side === 'a') {
       warState.a += diamonds;
       if (!warState.rosterA.has(user)) { warState.rosterA.set(user, { nickname, avatarUrl }); addWarAvatar('a', user, avatarUrl); }
@@ -495,6 +662,341 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: transparen
   }
 
   // ---------------------------------------------------------------------
+  // beyblade arena
+  // ---------------------------------------------------------------------
+  const BEY_MAX = 10, HOST_POWER = 30, VIEWER_POWER = 10, HOST_HP = 160, VIEWER_HP = 100, POWER_CAP = 500;
+  const RIM = 38, BEY_RADIUS = 13, CLASH_COOLDOWN = 900;
+  const AI_ON = qs.get('ai') !== '0';
+  const AI_KEY = 'sk-ai-f6cef349666bdaa2';
+  const AI_MODEL = 'deepseek-v4-flash@deepseek';
+  const AI_URL = qs.get('aiEndpoint') || '/api/host-chat';
+  let beys = [];
+  let beyWinner = null;
+  let clashPair = null;
+  let hostSay = null;
+  let hostThinking = false;
+  let hostSayTimer = null;
+  let lastHostSayAt = 0;
+  let physicsTimer = null;
+  let lastFrame = 0;
+  const beyCommentTimers = new Map();
+  const beyNodes = new Map(); // key -> { node, top, nameplate, barFill, power, crownEl, commentEl }
+
+  function hostName() { return USERNAME ? USERNAME.replace(/^@/, '') : 'HOST'; }
+  function hostBey() {
+    return { key: 'host', user: hostName(), nickname: hostName(), avatarUrl: fallbackAvatar(hostName()), power: HOST_POWER, hp: HOST_HP, maxHp: HOST_HP, isHost: true, burst: false, comment: null, crown: true, x: 50, y: 50, vx: 0, vy: 0, lastClash: 0 };
+  }
+  function initBeys() { beys = [hostBey()]; beyWinner = null; clearHostSay(); renderBeyblade(); }
+  // Launch a new viewer on a ring with tangential velocity so beys orbit the
+  // arena like a real beyblade, instead of sitting still at a fixed angle.
+  function spawnViewer(b, i, n) {
+    const angle = (Math.PI * 2 * i) / n + Math.random() * 0.6;
+    const r = 20 + Math.random() * 14;
+    b.x = 50 + Math.cos(angle) * r;
+    b.y = 50 + Math.sin(angle) * r;
+    const speed = 16 + Math.random() * 10;
+    b.vx = -Math.sin(angle) * speed;
+    b.vy = Math.cos(angle) * speed;
+  }
+  function ensureBey(user, nickname, avatarUrl) {
+    const key = user || 'anon';
+    let b = beys.find((x) => x.key === key);
+    if (b) { b.nickname = nickname || b.nickname; b.avatarUrl = avatarUrl || b.avatarUrl; return b; }
+    b = { key, user, nickname: nickname || user || 'anon', avatarUrl: avatarUrl || fallbackAvatar(user || 'anon'), power: VIEWER_POWER, hp: VIEWER_HP, maxHp: VIEWER_HP, isHost: false, burst: false, comment: null, crown: false, x: 50, y: 50, vx: 0, vy: 0, lastClash: 0 };
+    const viewers = beys.filter((x) => !x.isHost);
+    spawnViewer(b, viewers.length, viewers.length + 1);
+    beys.push(b);
+    if (beys.filter((x) => !x.isHost).length > BEY_MAX) {
+      const evict = beys.find((x) => !x.isHost);
+      if (evict) { beys = beys.filter((x) => x !== evict); beyCommentTimers.delete(evict.key); }
+    }
+    return b;
+  }
+  function beyPos(b) { return { left: b.x + '%', top: b.y + '%' }; }
+  function spinDur(b) { return Math.min(2.4, Math.max(0.35, 1.7 - b.power * 0.006)); }
+  function hpPct(b) { return Math.max(0, Math.min(100, (b.hp / b.maxHp) * 100)); }
+
+  // ----- host AI speech bubble -----
+  function clearHostSay() {
+    hostSay = null; hostThinking = false;
+    if (hostSayTimer) { clearTimeout(hostSayTimer); hostSayTimer = null; }
+    syncHostSay();
+  }
+  function speakHost(text, hold) {
+    hostSay = text; hostThinking = false;
+    if (hostSayTimer) clearTimeout(hostSayTimer);
+    hostSayTimer = setTimeout(() => { hostSay = null; syncHostSay(); }, hold || 6000);
+    syncHostSay();
+  }
+  function syncHostSay() {
+    const wrap = el.beyblade.querySelector('.host-say');
+    if (!wrap) return;
+    const txt = wrap.querySelector('.host-say-text');
+    const dots = wrap.querySelector('.host-say-dots');
+    if (hostThinking) { wrap.style.display = 'flex'; txt.style.display = 'none'; dots.style.display = 'inline-flex'; }
+    else if (hostSay) { wrap.style.display = 'flex'; txt.style.display = ''; txt.textContent = hostSay; dots.style.display = 'none'; }
+    else wrap.style.display = 'none';
+  }
+  async function aiComplete(messages) {
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const t = controller ? setTimeout(() => controller.abort(), 15000) : null;
+    try {
+      const res = await fetch(AI_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: AI_KEY, model: AI_MODEL, messages: messages }),
+        signal: controller ? controller.signal : undefined
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      const ch = data && data.choices && data.choices[0];
+      const text = (data && data.text) || (ch && ch.message ? ch.message.content : (ch ? ch.text : null));
+      if (typeof text !== 'string' || !text.trim()) return null;
+      return text.trim().slice(0, 80);
+    } catch (e) { return null; }
+    finally { if (t) clearTimeout(t); }
+  }
+  function sysPrompt() {
+    return 'Kamu adalah ' + hostName() + ', host TikTok LIVE yang energik, ramah, dan lucu. Balas singkat, natural, bahasa Indonesia gaul ringan, maksimal 20 kata, tanpa tanda kutip, tanpa hashtag, minim emoji. Jawab hanya isi balasan tanpa awalan nama.';
+  }
+  function maybeHostGreet(viewer) {
+    if (!AI_ON) return;
+    const now = Date.now();
+    if (now - lastHostSayAt < 2000) return;
+    lastHostSayAt = now;
+    hostThinking = true; syncHostSay();
+    aiComplete([{ role: 'system', content: sysPrompt() }, { role: 'user', content: 'Penonton @' + viewer + ' baru saja join. Sapa dia dengan ramah dan semangat dalam bahasa Indonesia (maks 20 kata).' }]).then((text) => {
+      if (text) speakHost(text); else { hostThinking = false; syncHostSay(); }
+    });
+  }
+  function maybeHostAnswer(viewer, comment) {
+    if (!AI_ON) return;
+    const clean = (comment || '').trim();
+    if (clean.length < 3 || clean.indexOf('!') === 0) return;
+    const now = Date.now();
+    if (now - lastHostSayAt < 6000) return;
+    lastHostSayAt = now;
+    hostThinking = true; syncHostSay();
+    aiComplete([{ role: 'system', content: sysPrompt() }, { role: 'user', content: 'Penonton @' + viewer + ' berkomentar: "' + clean + '". Balas dengan singkat, lucu, dan ramah dalam bahasa Indonesia (maks 20 kata).' }]).then((text) => {
+      if (text) speakHost(text); else { hostThinking = false; syncHostSay(); }
+    });
+  }
+
+  function beyMember(user, nickname, avatarUrl) {
+    const isNew = !beys.some((x) => x.key === (user || 'anon'));
+    ensureBey(user, nickname, avatarUrl);
+    renderBeyblade();
+    if (isNew) maybeHostGreet(nickname || user);
+  }
+  function beyChat(user, nickname, avatarUrl, comment) {
+    const b = ensureBey(user, nickname, avatarUrl);
+    const text = (comment || '').trim().slice(0, 28);
+    if (text) {
+      b.comment = text;
+      const prev = beyCommentTimers.get(b.key);
+      if (prev) clearTimeout(prev);
+      beyCommentTimers.set(b.key, setTimeout(() => { b.comment = null; updateBey(b); }, 3200));
+    }
+    updateBey(b);
+    maybeHostAnswer(nickname || user, comment || '');
+  }
+  function beyLike(user, nickname, avatarUrl, likeCount) {
+    const b = ensureBey(user, nickname, avatarUrl);
+    const boost = Math.min(20, likeCount || 1);
+    b.power = Math.min(POWER_CAP, b.power + boost);
+    b.hp = Math.min(b.maxHp, b.hp + boost);
+    updateBey(b);
+  }
+  function beyGift(user, nickname, avatarUrl, diamonds) {
+    const b = ensureBey(user, nickname, avatarUrl);
+    const big = diamonds >= 100;
+    b.power = Math.min(POWER_CAP, b.power + diamonds);
+    b.hp = Math.min(b.maxHp, b.hp + Math.floor(diamonds * 0.6));
+    b.crown = b.crown || big;
+    const ck = b.key + ':crown';
+    const prev = beyCommentTimers.get(ck);
+    if (prev) clearTimeout(prev);
+    beyCommentTimers.set(ck, setTimeout(() => { b.crown = b.isHost; updateBey(b); }, big ? 5000 : 2600));
+    updateBey(b);
+  }
+  function beyFollow(user, nickname, avatarUrl) {
+    const b = ensureBey(user, nickname, avatarUrl);
+    b.power = Math.min(POWER_CAP, b.power + 5);
+    updateBey(b);
+  }
+
+  function burstBey(b) {
+    if (b.burst) return;
+    b.burst = true;
+    sfxPlay('boom');
+    const n = beyNodes.get(b.key); if (n) n.node.classList.add('burst');
+    setTimeout(() => {
+      beys = beys.filter((x) => x.key !== b.key);
+      beyCommentTimers.delete(b.key);
+      renderBeyblade();
+      const alive = beys.filter((x) => !x.burst);
+      if (alive.length === 1) declareWinner(alive[0]);
+    }, 900);
+  }
+  function declareWinner(b) {
+    beyWinner = b.nickname;
+    sfxPlay('tada');
+    renderBeyblade();
+    setTimeout(initBeys, 4000);
+  }
+
+  // ----- physics -----
+  function resolveClash(a, c) {
+    const atk = a.power >= c.power ? a : c;
+    const def = a.power >= c.power ? c : a;
+    const dmg = Math.max(4, Math.round((atk.power - def.power) * 0.2) + 3 + Math.floor(Math.random() * 6));
+    def.hp = Math.max(0, def.hp - dmg);
+    sfxPlay('whoosh');
+    const na = beyNodes.get(atk.key), nc = beyNodes.get(def.key);
+    if (na) na.node.classList.add('clashing');
+    if (nc) nc.node.classList.add('clashing');
+    const st = el.beyblade.querySelector('.stadium');
+    if (st) { st.classList.remove('shake'); void st.offsetWidth; st.classList.add('shake'); }
+    setTimeout(() => {
+      if (na) na.node.classList.remove('clashing');
+      if (nc) nc.node.classList.remove('clashing');
+    }, 320);
+    updateBey(atk); updateBey(def);
+    if (def.hp <= 0) burstBey(def);
+    else {
+      const alive = beys.filter((x) => !x.burst);
+      if (alive.length === 1) declareWinner(alive[0]);
+    }
+  }
+  function stepPhysics(dt) {
+    if (beyWinner !== null) return;
+    const active = beys.filter((b) => !b.burst);
+    if (active.length === 0) return;
+    for (const b of active) {
+      const cx = 50 - b.x, cy = 50 - b.y;
+      const dist = Math.hypot(cx, cy) || 1;
+      const pull = b.isHost ? 8 : (dist > 22 ? 18 : 2);
+      const ax = (cx / dist) * pull + (Math.random() - 0.5) * 48;
+      const ay = (cy / dist) * pull + (Math.random() - 0.5) * 48;
+      b.vx += ax * dt; b.vy += ay * dt;
+      const sp = Math.hypot(b.vx, b.vy);
+      const maxSp = b.isHost ? 18 : 26 + Math.min(22, b.power * 0.04);
+      if (sp > maxSp) { const k = maxSp / sp; b.vx *= k; b.vy *= k; }
+      b.x += b.vx * dt; b.y += b.vy * dt;
+      const r = Math.hypot(b.x - 50, b.y - 50);
+      if (r > RIM) {
+        const nx = (b.x - 50) / r, ny = (b.y - 50) / r;
+        b.x = 50 + nx * RIM; b.y = 50 + ny * RIM;
+        const dot = b.vx * nx + b.vy * ny;
+        if (dot > 0) { b.vx -= 2 * dot * nx; b.vy -= 2 * dot * ny; }
+      }
+    }
+    const now = Date.now();
+    for (let i = 0; i < active.length; i++) {
+      for (let j = i + 1; j < active.length; j++) {
+        const a = active[i], c = active[j];
+        const dx = c.x - a.x, dy = c.y - a.y;
+        const d = Math.hypot(dx, dy);
+        if (d > 0.01 && d < BEY_RADIUS) {
+          const nx = dx / d, ny = dy / d;
+          const overlap = (BEY_RADIUS - d) / 2;
+          a.x -= nx * overlap; a.y -= ny * overlap;
+          c.x += nx * overlap; c.y += ny * overlap;
+          const dotA = a.vx * nx + a.vy * ny, dotC = c.vx * nx + c.vy * ny;
+          a.vx += (dotC - dotA) * nx; a.vy += (dotC - dotA) * ny;
+          c.vx += (dotA - dotC) * nx; c.vy += (dotA - dotC) * ny;
+          if (now - a.lastClash > CLASH_COOLDOWN && now - c.lastClash > CLASH_COOLDOWN) {
+            a.lastClash = now; c.lastClash = now;
+            resolveClash(a, c);
+          }
+        }
+      }
+    }
+  }
+  function physicsTick() {
+    const now = performance.now();
+    if (!lastFrame) lastFrame = now;
+    const dt = Math.min(0.05, (now - lastFrame) / 1000);
+    lastFrame = now;
+    stepPhysics(dt);
+    for (const b of beys) {
+      const n = beyNodes.get(b.key);
+      if (n) { n.node.style.left = b.x + '%'; n.node.style.top = b.y + '%'; }
+    }
+  }
+  function startPhysics() {
+    stopPhysics();
+    lastFrame = 0;
+    physicsTimer = setInterval(physicsTick, 33);
+  }
+  function stopPhysics() {
+    if (physicsTimer) { clearInterval(physicsTimer); physicsTimer = null; }
+  }
+
+  function updateBey(b) {
+    let n = beyNodes.get(b.key);
+    if (!n) { renderBeyblade(); n = beyNodes.get(b.key); if (!n) return; }
+    if (n.avatar.src !== b.avatarUrl) n.avatar.src = b.avatarUrl;
+    n.nameplate.textContent = (b.isHost ? '👑 ' : '') + '@' + b.nickname;
+    n.nameplate.className = 'bey-nameplate' + (b.isHost ? ' host' : '');
+    n.barFill.style.width = hpPct(b) + '%';
+    n.power.textContent = '⚡ ' + b.power.toLocaleString('id-ID');
+    if (b.crown && !n.crownEl) { n.crownEl = document.createElement('div'); n.crownEl.className = 'bey-crown'; n.crownEl.textContent = '👑'; n.top.appendChild(n.crownEl); }
+    else if (!b.crown && n.crownEl) { n.crownEl.remove(); n.crownEl = null; }
+    if (b.comment && !n.commentEl) { n.commentEl = document.createElement('div'); n.commentEl.className = 'bey-comment'; n.top.appendChild(n.commentEl); }
+    else if (!b.comment && n.commentEl) { n.commentEl.remove(); n.commentEl = null; }
+    if (n.commentEl) n.commentEl.textContent = b.comment || '';
+  }
+
+  function renderBeyblade() {
+    el.beyblade.innerHTML = '';
+    beyNodes.clear();
+    const stadium = document.createElement('div');
+    stadium.className = 'stadium' + (clashPair ? ' shake' : '');
+    const ring = document.createElement('div'); ring.className = 'stadium-ring'; stadium.appendChild(ring);
+    const core = document.createElement('div'); core.className = 'stadium-core'; stadium.appendChild(core);
+    const hs = document.createElement('div');
+    hs.className = 'host-say';
+    hs.style.display = 'none';
+    const tag = document.createElement('span'); tag.className = 'host-say-tag'; tag.textContent = '👑 ' + hostName(); hs.appendChild(tag);
+    const txt = document.createElement('span'); txt.className = 'host-say-text'; hs.appendChild(txt);
+    const dots = document.createElement('span'); dots.className = 'host-say-dots'; dots.innerHTML = '<i>·</i><i>·</i><i>·</i>'; dots.style.display = 'none'; hs.appendChild(dots);
+    stadium.appendChild(hs);
+    beys.forEach((b) => {
+      const node = document.createElement('div');
+      node.className = 'bey' + (b.isHost ? ' host' : '') + (b.burst ? ' burst' : '');
+      const pos = beyPos(b);
+      node.style.left = pos.left;
+      node.style.top = pos.top;
+      const dur = spinDur(b);
+      const top = document.createElement('div');
+      top.className = 'bey-top';
+      top.style.setProperty('--spin-dur', dur + 's');
+      const rotor = document.createElement('div'); rotor.className = 'bey-rotor';
+      const blade = document.createElement('div'); blade.className = 'bey-blade'; rotor.appendChild(blade);
+      top.appendChild(rotor);
+      const img = document.createElement('img'); img.className = 'bey-avatar'; img.src = b.avatarUrl; img.alt = b.nickname; top.appendChild(img);
+      let crownEl = null;
+      if (b.crown) { crownEl = document.createElement('div'); crownEl.className = 'bey-crown'; crownEl.textContent = '👑'; top.appendChild(crownEl); }
+      let commentEl = null;
+      if (b.comment) { commentEl = document.createElement('div'); commentEl.className = 'bey-comment'; commentEl.textContent = b.comment; top.appendChild(commentEl); }
+      node.appendChild(top);
+      const name = document.createElement('div'); name.className = 'bey-nameplate' + (b.isHost ? ' host' : ''); name.textContent = (b.isHost ? '👑 ' : '') + '@' + b.nickname; node.appendChild(name);
+      const bar = document.createElement('div'); bar.className = 'bey-bar';
+      const fill = document.createElement('div'); fill.className = 'bey-bar-fill'; fill.style.width = hpPct(b) + '%'; bar.appendChild(fill);
+      node.appendChild(bar);
+      const power = document.createElement('div'); power.className = 'bey-power'; power.textContent = '⚡ ' + b.power.toLocaleString('id-ID'); node.appendChild(power);
+      stadium.appendChild(node);
+      beyNodes.set(b.key, { node, top, avatar: img, nameplate: name, barFill: fill, power, crownEl, commentEl });
+    });
+    if (beyWinner) {
+      const win = document.createElement('div'); win.className = 'bey-win'; win.textContent = '🏆 @' + beyWinner + ' menang!'; stadium.appendChild(win);
+    }
+    el.beyblade.appendChild(stadium);
+    syncHostSay();
+  }
+
+  // ---------------------------------------------------------------------
   // mode switching
   // ---------------------------------------------------------------------
   function setMode(m) {
@@ -502,10 +1004,13 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: transparen
     el.arena.style.display = m === 'arena' ? 'flex' : 'none';
     el.marble.style.display = m === 'marble' ? 'flex' : 'none';
     el.war.style.display = m === 'war' ? 'flex' : 'none';
-    el.hudTitle.textContent = m === 'marble' ? '🏁 Avatar Race' : m === 'war' ? '⚔️ Avatar War' : '👥 Audience Arena';
-    el.hudSub.textContent = m === 'marble' ? 'gift = dorong avatar-mu' : m === 'war' ? 'gift = isi kubu' : 'penonton = karakter dari foto profil';
+    el.beyblade.style.display = m === 'beyblade' ? 'flex' : 'none';
+    el.hudTitle.textContent = m === 'marble' ? '🏁 Avatar Race' : m === 'war' ? '⚔️ Avatar War' : m === 'beyblade' ? '🌀 Beyblade Arena' : '👥 Audience Arena';
+    el.hudSub.textContent = m === 'marble' ? 'gift = dorong avatar-mu' : m === 'war' ? 'gift = isi kubu' : m === 'beyblade' ? 'gift / like = tambah kekuatan' : 'penonton = karakter dari foto profil';
     if (m === 'marble') refreshRacers();
     if (m === 'war') buildWar();
+    if (m === 'beyblade') { if (!beys.length) initBeys(); else renderBeyblade(); startPhysics(); }
+    else stopPhysics();
   }
 
   // ---------------------------------------------------------------------

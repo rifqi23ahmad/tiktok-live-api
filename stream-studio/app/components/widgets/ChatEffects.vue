@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useTikTokStream } from '~/composables/useTikTokStream'
+import { useSfx } from '~/composables/useSfx'
 import { EMOJI_RE } from '~/utils/stream'
 
 const props = defineProps<{ settings: Record<string, any> }>()
 
 const stream = useTikTokStream()
+const sfx = useSfx()
+
+const sfxOn = computed(() => props.settings.sfx !== false)
 
 interface Fx {
   id: number
@@ -82,6 +86,7 @@ function addHype(n: number) {
   if (hype.value >= 100 && !onFire.value) {
     onFire.value = true
     doRain()
+    sfx.trigger('hype', { enabled: sfxOn.value })
     onFireTimer = setTimeout(() => {
       onFire.value = false
       hype.value = 0
@@ -102,6 +107,7 @@ function onNewMessage(m: { id: string; comment: string; user: string }) {
   }
   if (lower.startsWith('!sapa ')) {
     shout.value = { text: c.slice(6).slice(0, 80), from: m.user }
+    sfx.trigger('shoutout', { enabled: sfxOn.value })
     clearTimeout(shoutTimer!)
     shoutTimer = setTimeout(() => {
       shout.value = null

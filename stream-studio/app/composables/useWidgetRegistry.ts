@@ -8,6 +8,9 @@ export type WidgetType =
   | 'gift-leaderboard'
   | 'chat-effects'
   | 'avatar-arena'
+  | 'team-battle'
+  | 'loyalty-points'
+  | 'lucky-wheel'
 
 export interface WidgetDef {
   type: WidgetType
@@ -82,11 +85,49 @@ export const widgetDefs: WidgetDef[] = [
   {
     type: 'avatar-arena',
     name: 'Viewer Characters (Avatar Arena)',
-    icon: '🫥',
-    description: 'Penonton yang join tampil sebagai karakter dari foto profilnya. Reaksi chat/like/gift/follow, plus Avatar Race & Avatar War.',
+    icon: '🌀',
+    description: 'Penonton jadi beyblade yang beradu di arena. Gift/like tambah kekuatan, komentar tampil di beyblade, host ikut main, sapa penonton pakai AI & jawab pakai suara (TTS). Plus Audience Arena, Avatar Race & Avatar War.',
     defaultW: 88,
     defaultH: 48,
-    defaultProps: { mode: 'arena' as 'arena' | 'marble' | 'war' }
+    defaultProps: { mode: 'beyblade' as 'beyblade' | 'arena' | 'marble' | 'war', ai: true, aiKey: '', tts: true, aiVoice: 'id-ID' }
+  },
+  {
+    type: 'team-battle',
+    name: 'Team Battle',
+    icon: '⚔️',
+    description: 'Penonton pilih kubu lewat chat, gift mereka isi kubu. Ronde berjalan otomatis dengan countdown + selebrasi pemenang.',
+    defaultW: 82,
+    defaultH: 42,
+    defaultProps: {
+      teamA: 'Kubu Merah',
+      teamB: 'Kubu Biru',
+      keyA: ['merah'],
+      keyB: ['biru'],
+      roundSec: 60,
+      auto: true
+    }
+  },
+  {
+    type: 'loyalty-points',
+    name: 'Poin Loyalty + Shop',
+    icon: '💰',
+    description: 'Penonton kumpulkan poin dari chat/like/follow/gift, lalu tukarkan lewat perintah (!spin, !spot, !party).',
+    defaultW: 60,
+    defaultH: 42,
+    defaultProps: { title: 'Poin Penonton', maxRows: 5, chatPts: 1, followPts: 20, giftMul: 2, spinCost: 20 }
+  },
+  {
+    type: 'lucky-wheel',
+    name: 'Roda Keberuntungan',
+    icon: '🎡',
+    description: 'Setiap gift jadi tiket undian. Saat ambang diamond tercapai, roda berputar dan pemenang (bobot sesuai gift) diundi.',
+    defaultW: 62,
+    defaultH: 58,
+    defaultProps: {
+      title: 'Roda Keberuntungan',
+      threshold: 1000,
+      segments: ['💎 x2', '🎁 10 💎', '🔥 Shoutout', '⭐ 50 💎', '💔 Zonk', '🏆 100 💎']
+    }
   }
 ]
 

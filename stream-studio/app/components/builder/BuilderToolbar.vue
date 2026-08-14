@@ -2,9 +2,12 @@
 import { computed, ref } from 'vue'
 import { useStudio } from '~/composables/useStudio'
 import { useTikTokStream } from '~/composables/useTikTokStream'
+import { useSfx } from '~/composables/useSfx'
+import { encodeOverlayConfig } from '~/utils/overlay'
 
 const { loadClassicPreset, clearAll, instances } = useStudio()
 const stream = useTikTokStream()
+const sfx = useSfx()
 
 const statusLabel = computed(() => {
   if (stream.mode.value === 'demo') return 'Demo mode'
@@ -26,15 +29,23 @@ let copyTimer: ReturnType<typeof setTimeout> | null = null
 const publishUrl = computed(() => {
   const cleanId = stream.username.value.trim().replace(/^@/, '')
   const key = stream.apiKey.value.trim()
-  const params = new URLSearchParams()
-  if (cleanId && key && key !== 'demo') {
-    params.set('username', cleanId)
-    params.set('apiKey', key)
-  } else {
-    params.set('demo', '1')
+  const hasCreds = !!cleanId && !!key && key !== 'demo'
+  const config = {
+    username: cleanId,
+    apiKey: key,
+    demo: !hasCreds,
+    instances: instances.value.map((i) => ({
+      id: i.id,
+      type: i.type,
+      x: i.x,
+      y: i.y,
+      w: i.w,
+      h: i.h,
+      props: i.props
+    }))
   }
   const origin = import.meta.client ? window.location.origin : ''
-  return `${origin}/avatar-arena.html?${params.toString()}`
+  return `${origin}/overlay?config=${encodeOverlayConfig(config)}`
 })
 
 const copyUrl = async () => {
@@ -51,6 +62,8 @@ const copyUrl = async () => {
 const openPreview = () => {
   window.open(publishUrl.value, '_blank', 'noopener')
 }
+
+const sfxOpen = ref(false)
 </script>
 
 <template>
@@ -71,11 +84,44 @@ const openPreview = () => {
         {{ statusLabel }}
       </span>
       <NuxtLink to="/live" class="btn primary">Hubungkan Stream</NuxtLink>
+      <div class="sfx-wrap">
+        <button class="btn" :class="{ 'sfx-muted': sfx.muted.value }" @click="sfxOpen = !sfxOpen">
+          {{ sfx.muted.value ? '🔇 SFX' : '🔊 SFX' }}
+        </button>
+        <div v-if="sfxOpen" class="sfx-pop">
+          <div class="pp-title">Efek Suara (SFX)</div>
+          <p class="pp-sub">Petakan suara ke event interaktif. Suara disintesis langsung (tanpa file audio).</p>
+
+          <label class="sfx-mute check">
+            <input type="checkbox" :checked="!sfx.muted.value" @change="sfx.setMuted(!($event.target as HTMLInputElement).checked)" />
+            Aktifkan suara (global)
+          </label>
+
+          <div class="sfx-list">
+            <div v-for="ev in sfx.events" :key="ev.id" class="sfx-row">
+              <span class="sfx-ev" :title="ev.id">{{ ev.emoji }} {{ ev.name }}</span>
+              <select
+                :value="sfx.eventMap.value[ev.id]"
+                @change="sfx.setEventSound(ev.id, ($event.target as HTMLSelectElement).value)"
+              >
+                <option v-for="s in sfx.sounds" :key="s.id" :value="s.id">{{ s.emoji }} {{ s.name }}</option>
+              </select>
+              <button class="sfx-play" title="Tes suara" @click="sfx.preview(sfx.eventMap.value[ev.id] || ev.default)">▶</button>
+            </div>
+          </div>
+
+          <div class="pp-actions">
+            <button class="btn ghost" @click="sfx.resetMapping()">Reset default</button>
+            <button class="btn primary" @click="sfxOpen = false">Selesai</button>
+          </div>
+          <p class="pp-hint">Browser source (OBS) biasanya auto-mute. Klik area overlay sekali (atau aktifkan audio source di OBS) untuk menyalakan suara.</p>
+        </div>
+      </div>
       <div class="publish-wrap">
         <button class="btn publish" @click="publishOpen = !publishOpen">🔗 Publish</button>
         <div v-if="publishOpen" class="publish-pop">
           <div class="pp-title">Browser Source URL</div>
-          <p class="pp-sub">Tempel URL ini sebagai <b>Browser Source</b> di OBS / Streamlabs / TikTok Live Studio (1080 × 1920).</p>
+          <p class="pp-sub">Tempel URL ini sebagai <b>Browser Source</b> di OBS / Streamlabs / TikTok Live Studio (1080 × 1920). Semua widget di kanvas ({{ instances.length }}) dirender sekaligus.</p>
           <div class="urlbox">
             <code>{{ publishUrl }}</code>
           </div>
@@ -105,6 +151,71 @@ const openPreview = () => {
 .tb-center { display: flex; gap: 8px; margin: 0 auto; }
 .tb-right { display: flex; align-items: center; gap: 12px; }
 .publish-wrap { position: relative; }
+.sfx-wrap { position: relative; }
+.btn.sfx-muted { opacity: 0.6; }
+.sfx-pop {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 340px;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: oklch(13% 0.02 280);
+  border: 1px solid var(--edge-strong);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 12px 40px oklch(0% 0 0 / 0.6);
+  z-index: 50;
+}
+.sfx-mute.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  background: oklch(20% 0.03 280);
+  cursor: pointer;
+}
+.sfx-mute input { accent-color: var(--accent); }
+.sfx-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.sfx-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+}
+.sfx-ev { color: var(--ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sfx-row select {
+  background: var(--bg-deep);
+  border: 1px solid var(--edge);
+  color: var(--ink);
+  border-radius: 7px;
+  padding: 5px 6px;
+  font-size: 0.76rem;
+  max-width: 150px;
+}
+.sfx-row select:focus { outline: none; border-color: var(--accent); }
+.sfx-play {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: 1px solid var(--edge-strong);
+  background: var(--bg-raise);
+  color: var(--ink);
+  font-size: 0.7rem;
+}
+.sfx-play:hover { background: oklch(20% 0.03 280); }
 .btn.publish { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #0b0b0b; font-weight: 700; }
 .publish-pop {
   position: absolute;

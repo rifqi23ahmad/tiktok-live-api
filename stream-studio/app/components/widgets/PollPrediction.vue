@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useTikTokStream } from '~/composables/useTikTokStream'
+import { useSfx } from '~/composables/useSfx'
 
 const props = defineProps<{ settings: Record<string, any> }>()
 
 const stream = useTikTokStream()
+const sfx = useSfx()
+
+const sfxOn = computed(() => props.settings.sfx !== false)
 
 // ── PK battle state (tebak pemenang PK) ──
 const PK_STATUS = { ACTIVE: 1, STARTING: 2, ENDED: 3, PREPARING: 4 } as const
@@ -88,8 +92,13 @@ watch(
     if (!m || m.id === lastMsg) return
     lastMsg = m.id
     const c = m.comment.toLowerCase()
-    if (keysA.value.some((k) => c.includes(k))) votes.value = { ...votes.value, [m.user]: 0 }
-    else if (keysB.value.some((k) => c.includes(k))) votes.value = { ...votes.value, [m.user]: 1 }
+    if (keysA.value.some((k) => c.includes(k))) {
+      votes.value = { ...votes.value, [m.user]: 0 }
+      sfx.trigger('poll-vote', { enabled: sfxOn.value })
+    } else if (keysB.value.some((k) => c.includes(k))) {
+      votes.value = { ...votes.value, [m.user]: 1 }
+      sfx.trigger('poll-vote', { enabled: sfxOn.value })
+    }
   }
 )
 
@@ -98,6 +107,10 @@ const countB = computed(() => Object.values(votes.value).filter((v) => v === 1).
 const totalVotes = computed(() => countA.value + countB.value)
 const pctA = computed(() => (totalVotes.value ? Math.round((countA.value / totalVotes.value) * 100) : 0))
 const pctB = computed(() => (totalVotes.value ? Math.round((countB.value / totalVotes.value) * 100) : 0))
+
+watch(pkEnded, (ended) => {
+  if (ended) sfx.trigger('poll-result', { enabled: sfxOn.value })
+})
 </script>
 
 <template>

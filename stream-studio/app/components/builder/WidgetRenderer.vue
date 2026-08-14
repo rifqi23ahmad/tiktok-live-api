@@ -8,6 +8,9 @@ import PollPrediction from '~/components/widgets/PollPrediction.vue'
 import GiftLeaderboard from '~/components/widgets/GiftLeaderboard.vue'
 import ChatEffects from '~/components/widgets/ChatEffects.vue'
 import AvatarArena from '~/components/widgets/AvatarArena.vue'
+import TeamBattle from '~/components/widgets/TeamBattle.vue'
+import LoyaltyPoints from '~/components/widgets/LoyaltyPoints.vue'
+import LuckyWheel from '~/components/widgets/LuckyWheel.vue'
 
 const props = defineProps<{ type: WidgetType; settings: Record<string, any> }>()
 
@@ -18,7 +21,10 @@ const map: Record<WidgetType, any> = {
   'poll-prediction': PollPrediction,
   'gift-leaderboard': GiftLeaderboard,
   'chat-effects': ChatEffects,
-  'avatar-arena': AvatarArena
+  'avatar-arena': AvatarArena,
+  'team-battle': TeamBattle,
+  'loyalty-points': LoyaltyPoints,
+  'lucky-wheel': LuckyWheel
 }
 
 const comp = computed(() => map[props.type])

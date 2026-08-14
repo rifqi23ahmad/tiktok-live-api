@@ -64,6 +64,11 @@ function setOption(idx: number, val: string) {
       <div class="insp-section">
         <div class="insp-label">Pengaturan</div>
 
+        <label class="mini-field check">
+          <input type="checkbox" :checked="inst.props.sfx !== false" @change="setProp('sfx', ($event.target as HTMLInputElement).checked)" />
+          🔊 Efek suara widget
+        </label>
+
         <template v-if="inst.type === 'goal-bar'">
           <label class="mini-field">Judul
             <input type="text" :value="inst.props.title" @input="setProp('title', ($event.target as HTMLInputElement).value)" />
@@ -144,10 +149,85 @@ function setOption(idx: number, val: string) {
         <template v-else-if="inst.type === 'avatar-arena'">
           <label class="mini-field">Mode
             <select :value="inst.props.mode" @change="setProp('mode', ($event.target as HTMLSelectElement).value)">
+              <option value="beyblade">Beyblade Arena</option>
               <option value="arena">Audience Arena</option>
               <option value="marble">Avatar Race</option>
               <option value="war">Avatar War</option>
             </select>
+          </label>
+          <label class="mini-field check">
+            <input type="checkbox" :checked="inst.props.ai !== false" @change="setProp('ai', ($event.target as HTMLInputElement).checked)" />
+            🤖 AI host (sapa penonton & balas komentar)
+          </label>
+          <label class="mini-field">API key Tarogo (opsional)
+            <input type="text" :value="inst.props.aiKey" placeholder="sk-ai-…" @input="setProp('aiKey', ($event.target as HTMLInputElement).value)" />
+          </label>
+          <label class="mini-field check">
+            <input type="checkbox" :checked="inst.props.tts !== false" @change="setProp('tts', ($event.target as HTMLInputElement).checked)" />
+            🔊 Suara host (text-to-speech)
+          </label>
+          <label class="mini-field">Bahasa suara host
+            <select :value="inst.props.aiVoice || 'id-ID'" @change="setProp('aiVoice', ($event.target as HTMLSelectElement).value)">
+              <option value="id-ID">Indonesia</option>
+              <option value="en-US">English (US)</option>
+              <option value="en-GB">English (UK)</option>
+              <option value="ms-MY">Melayu</option>
+              <option value="ja-JP">日本語</option>
+              <option value="ko-KR">한국어</option>
+              <option value="ar-SA">العربية</option>
+            </select>
+          </label>
+        </template>
+
+        <template v-else-if="inst.type === 'team-battle'">
+          <div class="grid2">
+            <label class="mini-field">Nama Kubu A
+              <input type="text" :value="inst.props.teamA" @input="setProp('teamA', ($event.target as HTMLInputElement).value)" />
+            </label>
+            <label class="mini-field">Nama Kubu B
+              <input type="text" :value="inst.props.teamB" @input="setProp('teamB', ($event.target as HTMLInputElement).value)" />
+            </label>
+          </div>
+          <div class="grid2">
+            <label class="mini-field">Keyword A
+              <input type="text" :value="inst.props.keyA?.join(',')" @input="setProp('keyA', ($event.target as HTMLInputElement).value.split(',').map(s => s.trim()))" />
+            </label>
+            <label class="mini-field">Keyword B
+              <input type="text" :value="inst.props.keyB?.join(',')" @input="setProp('keyB', ($event.target as HTMLInputElement).value.split(',').map(s => s.trim()))" />
+            </label>
+          </div>
+          <label class="mini-field">Durasi ronde (detik, 0 = tanpa batas)
+            <input type="number" :value="inst.props.roundSec" @input="setNumProp('roundSec', ($event.target as HTMLInputElement).value)" />
+          </label>
+          <label class="mini-field check">
+            <input type="checkbox" :checked="inst.props.auto !== false" @change="setProp('auto', ($event.target as HTMLInputElement).checked)" />
+            Auto lanjut ronde
+          </label>
+        </template>
+
+        <template v-else-if="inst.type === 'loyalty-points'">
+          <label class="mini-field">Judul
+            <input type="text" :value="inst.props.title" @input="setProp('title', ($event.target as HTMLInputElement).value)" />
+          </label>
+          <div class="grid2">
+            <label class="mini-field">Jumlah baris
+              <input type="number" :value="inst.props.maxRows" @input="setNumProp('maxRows', ($event.target as HTMLInputElement).value)" />
+            </label>
+            <label class="mini-field">Biaya !spin
+              <input type="number" :value="inst.props.spinCost" @input="setNumProp('spinCost', ($event.target as HTMLInputElement).value)" />
+            </label>
+          </div>
+        </template>
+
+        <template v-else-if="inst.type === 'lucky-wheel'">
+          <label class="mini-field">Judul
+            <input type="text" :value="inst.props.title" @input="setProp('title', ($event.target as HTMLInputElement).value)" />
+          </label>
+          <label class="mini-field">Ambang diamond (trigger putaran)
+            <input type="number" :value="inst.props.threshold" @input="setNumProp('threshold', ($event.target as HTMLInputElement).value)" />
+          </label>
+          <label class="mini-field">Segmen (pisahkan dengan koma)
+            <input type="text" :value="inst.props.segments?.join(',')" @input="setProp('segments', ($event.target as HTMLInputElement).value.split(',').map(s => s.trim()).filter(Boolean))" />
           </label>
         </template>
       </div>

@@ -12,7 +12,7 @@ const status = computed(() => {
 })
 
 const steps = [
-  { t: 'Susun widget', d: 'Drag-and-drop 6 widget ke kanvas 9:16.' },
+  { t: 'Susun widget', d: 'Drag-and-drop 10 widget ke kanvas 9:16.' },
   { t: 'Hubungkan stream', d: 'Masukkan username TikTok (atau pakai mode demo).' },
   { t: 'Atur & pratinjau', d: 'Edit properti tiap widget, lihat hasil real-time.' },
   { t: 'Publikasikan', d: 'Tempel URL overlay sebagai browser source di OBS.' }
@@ -39,7 +39,7 @@ const steps = [
       </div>
     </div>
 
-    <h2 style="margin: 28px 0 4px">6 widget v1</h2>
+    <h2 style="margin: 28px 0 4px">10 widget interaktif</h2>
     <p class="page-sub">Semua widget membaca stream secara real-time lewat WebSocket TikTok LIVE.</p>
 
     <div class="grid-3">

@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useTikTokStream } from '~/composables/useTikTokStream'
+import { useSfx } from '~/composables/useSfx'
 import { hashStr, fmtNum } from '~/utils/stream'
 
 const props = defineProps<{ settings: Record<string, any> }>()
 
 const stream = useTikTokStream()
+const sfx = useSfx()
+
+const sfxOn = computed(() => props.settings.sfx !== false)
 
 const game = computed<'marble' | 'war'>(() => (props.settings.game === 'war' ? 'war' : 'marble'))
 
@@ -25,8 +29,10 @@ let resetTimer: ReturnType<typeof setTimeout> | null = null
 function advanceMarble() {
   const i = Math.floor(Math.random() * 4)
   positions.value[i] = Math.min(100, positions.value[i] + 2 + Math.random() * 9)
+  sfx.trigger('marble', { enabled: sfxOn.value })
   if (positions.value[i] >= 100) {
     winner.value = i
+    sfx.trigger('win', { enabled: sfxOn.value })
     resetTimer = setTimeout(() => {
       positions.value = [0, 0, 0, 0]
       winner.value = null
@@ -53,6 +59,7 @@ watch(
     if (!g || g.id === lastGift) return
     lastGift = g.id
     if (game.value === 'marble') advanceMarble()
+    else sfx.trigger('score', { enabled: sfxOn.value })
   }
 )
 </script>

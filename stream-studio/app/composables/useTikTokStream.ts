@@ -220,7 +220,12 @@ const DEMO_COMMENTS = [
   'wkwkwk 🤣',
   'love you ❤️',
   'mantap keren goks',
-  'salam dari jakarta 👋'
+  'salam dari jakarta 👋',
+  'merah 🔴',
+  'biru 🔵',
+  '!spin',
+  '!poin',
+  '!party'
 ]
 
 function startDemo() {

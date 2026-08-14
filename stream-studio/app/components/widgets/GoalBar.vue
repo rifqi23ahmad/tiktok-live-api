@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useTikTokStream } from '~/composables/useTikTokStream'
+import { useSfx } from '~/composables/useSfx'
 import { fmtNum } from '~/utils/stream'
 
 const props = defineProps<{ settings: Record<string, any> }>()
 
 const stream = useTikTokStream()
+const sfx = useSfx()
+
+const sfxOn = computed(() => props.settings.sfx !== false)
 
 const target = computed(() => Number(props.settings.target) || 0)
 const title = computed(() => props.settings.title || 'Target')
@@ -14,6 +18,10 @@ const pct = computed(() =>
   target.value > 0 ? Math.min(100, (stream.totalDiamonds.value / target.value) * 100) : 0
 )
 const done = computed(() => target.value > 0 && stream.totalDiamonds.value >= target.value)
+
+watch(done, (isDone) => {
+  if (isDone) sfx.trigger('goal-complete', { enabled: sfxOn.value })
+})
 </script>
 
 <template>

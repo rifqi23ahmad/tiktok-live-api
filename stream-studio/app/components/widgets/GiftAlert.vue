@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useTikTokStream } from '~/composables/useTikTokStream'
+import { useSfx } from '~/composables/useSfx'
 import { tierOf, tierEmoji, tierColor, tierHold, fmtNum } from '~/utils/stream'
 import type { GiftTier } from '~/utils/stream'
 
 const props = defineProps<{ settings: Record<string, any> }>()
 
 const stream = useTikTokStream()
+const sfx = useSfx()
+
+const sfxOn = computed(() => props.settings.sfx !== false)
 
 interface AlertItem {
   user: string
@@ -48,6 +52,10 @@ watch(
     if (!g || g.id === lastSeen) return
     lastSeen = g.id
     if (tierOf(g.diamondCount) < minTier.value) return
+    const t = tierOf(g.diamondCount)
+    if (t >= 4) sfx.trigger('gift-big', { enabled: sfxOn.value })
+    else sfx.trigger('gift', { enabled: sfxOn.value })
+    if (g.repeatCount > 1) sfx.trigger('combo', { enabled: sfxOn.value })
     queue.value.push({
       user: g.user,
       giftName: g.giftName,
