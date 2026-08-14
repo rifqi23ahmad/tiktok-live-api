@@ -28,5 +28,15 @@ export default defineNuxtConfig({
   // Override with TIKTOOL_API_KEY env var or a real key from https://tik.tools
   tiktool: {
     apiKey: process.env.TIKTOOL_API_KEY || 'demo_tiktokliveapi_public_2026'
+  },
+
+  // AI host (Tarogo) — server-side only. The key must never reach the client
+  // bundle or the published overlay URL. It is resolved at request time from
+  // TAROGO_API_KEY (or the NUXT_TAROGO_API_KEY runtime-config override); we
+  // deliberately keep the default empty so no secret is baked into the build.
+  runtimeConfig: {
+    tarogoApiKey: '',
+    tarogoEndpoint: process.env.TAROGO_API_ENDPOINT || 'https://api.tarogo.ai/chat/completions',
+    public: {}
   }
 })

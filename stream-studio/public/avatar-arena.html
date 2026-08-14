@@ -667,7 +667,8 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: transparen
   const BEY_MAX = 10, HOST_POWER = 30, VIEWER_POWER = 10, HOST_HP = 160, VIEWER_HP = 100, POWER_CAP = 500;
   const RIM = 38, BEY_RADIUS = 13, CLASH_COOLDOWN = 900;
   const AI_ON = qs.get('ai') !== '0';
-  const AI_KEY = 'sk-ai-f6cef349666bdaa2';
+  // AI host credentials live server-side (env TAROGO_API_KEY); the proxy
+  // injects the key, so no secret is shipped in this static overlay.
   const AI_MODEL = 'deepseek-v4-flash@deepseek';
   const AI_URL = qs.get('aiEndpoint') || '/api/host-chat';
   let beys = [];
@@ -744,7 +745,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: transparen
       const res = await fetch(AI_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: AI_KEY, model: AI_MODEL, messages: messages }),
+        body: JSON.stringify({ model: AI_MODEL, messages: messages }),
         signal: controller ? controller.signal : undefined
       });
       if (!res.ok) return null;

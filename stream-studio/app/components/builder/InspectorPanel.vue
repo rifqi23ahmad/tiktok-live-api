@@ -159,9 +159,10 @@ function setOption(idx: number, val: string) {
             <input type="checkbox" :checked="inst.props.ai !== false" @change="setProp('ai', ($event.target as HTMLInputElement).checked)" />
             🤖 AI host (sapa penonton & balas komentar)
           </label>
-          <label class="mini-field">API key Tarogo (opsional)
-            <input type="text" :value="inst.props.aiKey" placeholder="sk-ai-…" @input="setProp('aiKey', ($event.target as HTMLInputElement).value)" />
+          <label class="mini-field">Model Tarogo (opsional)
+            <input type="text" :value="inst.props.aiModel" placeholder="deepseek-v4-flash@deepseek" @input="setProp('aiModel', ($event.target as HTMLInputElement).value)" />
           </label>
+          <p class="mini-hint">API key Tarogo diambil dari server (env TAROGO_API_KEY) — tidak disimpan di overlay.</p>
           <label class="mini-field check">
             <input type="checkbox" :checked="inst.props.tts !== false" @change="setProp('tts', ($event.target as HTMLInputElement).checked)" />
             🔊 Suara host (text-to-speech)
@@ -305,6 +306,7 @@ function setOption(idx: number, val: string) {
   border-color: var(--accent);
 }
 .mini-field.check { flex-direction: row; align-items: center; gap: 8px; }
+.mini-hint { margin: 0; font-size: 0.72rem; color: var(--ink-faint); line-height: 1.4; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .grid4 input { padding: 6px; font-size: 0.82rem; }

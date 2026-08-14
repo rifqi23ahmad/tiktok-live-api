@@ -5,15 +5,14 @@
 //
 // Calls go through the Nitro server route `/api/host-chat`, which proxies to
 // Tarogo server-side (Tarogo has no CORS headers, so a direct browser call
-// would be blocked). Keys/models are configurable per widget via settings.
+// would be blocked). The Tarogo credentials live server-side only (env), so
+// the client never sees the secret. Model can be overridden per widget.
 
-const DEFAULT_API_KEY = 'sk-ai-f6cef349666bdaa2'
 const DEFAULT_MODEL = 'deepseek-v4-flash@deepseek'
 const PROXY_PATH = '/api/host-chat'
 const MAX_CHARS = 80
 
 export interface HostAiConfig {
-  apiKey?: string
   model?: string
   endpoint?: string
 }
@@ -28,7 +27,6 @@ function systemPrompt(host: string): string {
 }
 
 async function complete(cfg: HostAiConfig, host: string, user: string): Promise<string | null> {
-  const apiKey = cfg.apiKey?.trim() || DEFAULT_API_KEY
   const model = cfg.model?.trim() || DEFAULT_MODEL
   const endpoint = cfg.endpoint?.trim() || PROXY_PATH
   const controller = typeof AbortController !== 'undefined' ? new AbortController() : null
@@ -38,7 +36,6 @@ async function complete(cfg: HostAiConfig, host: string, user: string): Promise<
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        apiKey,
         model,
         messages: [
           { role: 'system', content: systemPrompt(host) },

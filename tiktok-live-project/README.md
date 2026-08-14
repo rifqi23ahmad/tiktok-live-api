@@ -1,75 +1,37 @@
-# Nuxt Minimal Starter
+# TikTok Live Stream Studio
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+Demo aplikasi untuk SDK `tiktok-live-api`. Buat URL browser-source overlay dalam satu klik,
+lalu tempel ke OBS / Streamlabs / TikTok Live Studio.
+
+## Fitur
+
+- Konfigurasi stream (username, API key, target diamond, judul target)
+- URL browser-source yang siap salin (`?username=…&apiKey=…&goal=…`)
+- Dashboard analitik & recap sesi (chat, like, gift, top gifter, peak viewers)
 
 ## Setup
 
-Make sure to install dependencies:
-
 ```bash
-# npm
 npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
 ```
+
+Ambil API key gratis di [tik.tools](https://tik.tools), lalu masukkan di halaman konfigurasi.
 
 ## Development Server
 
-Start the development server on `http://localhost:3000`:
-
 ```bash
-# npm
 npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
 ```
+
+Buka `http://localhost:3000`. Isi username + API key → salin URL → tempel sebagai
+Browser Source (1080×1920).
 
 ## Production
 
-Build the application for production:
-
 ```bash
-# npm
 npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
-```
-
-Locally preview production build:
-
-```bash
-# npm
 npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
 ```
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+Koneksi WebSocket memakai auto-reconnect bawaan SDK (`TikTokLive`), jadi overlay pulih
+sendiri jika stream putus sementara. Penonton live dibaca dari event `roomUserSeq`.

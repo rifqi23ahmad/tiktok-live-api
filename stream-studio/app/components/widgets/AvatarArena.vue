@@ -288,6 +288,8 @@ const CLASH_COOLDOWN = 900 // ms between clashes for a given bey
 const beys = ref<Bey[]>([])
 const beyWinner = ref<string | null>(null)
 const clashPair = ref<{ a: string; b: string } | null>(null)
+const sparks = ref<Array<{ id: number; x: number; y: number }>>([])
+let sparkSeq = 0
 const hostSay = ref<string | null>(null)
 const hostThinking = ref(false)
 const beyCommentTimers = new Map<string, ReturnType<typeof setTimeout>>()
@@ -297,7 +299,7 @@ let lastHostSayAt = 0
 let hostSayTimer: ReturnType<typeof setTimeout> | null = null
 
 const aiEnabled = computed(() => props.settings.ai !== false)
-const aiConfig = computed(() => ({ apiKey: props.settings.aiKey }))
+const aiConfig = computed(() => ({ model: props.settings.aiModel }))
 
 function hostName() {
   return stream.username.value.trim().replace(/^@/, '') || 'HOST'
@@ -318,8 +320,8 @@ function hostBey(): Bey {
     comment: null,
     crown: true,
     x: 50,
-    y: 50,
-    vx: 0,
+    y: 26,
+    vx: 15,
     vy: 0,
     lastClash: 0
   }
@@ -338,7 +340,7 @@ function spawnViewer(b: Bey, i: number, n: number) {
   const r = 20 + Math.random() * 14
   b.x = 50 + Math.cos(angle) * r
   b.y = 50 + Math.sin(angle) * r
-  const speed = 16 + Math.random() * 10
+  const speed = 20 + Math.random() * 12
   b.vx = -Math.sin(angle) * speed
   b.vy = Math.cos(angle) * speed
 }
@@ -512,7 +514,16 @@ function declareWinner(b: Bey) {
 
 // ----- physics -----
 
+function spawnSpark(x: number, y: number) {
+  const id = ++sparkSeq
+  sparks.value = [...sparks.value, { id, x, y }]
+  setTimeout(() => {
+    sparks.value = sparks.value.filter((s) => s.id !== id)
+  }, 520)
+}
+
 function resolveClash(a: Bey, c: Bey) {
+  spawnSpark((a.x + c.x) / 2, (a.y + c.y) / 2)
   const atk = a.power >= c.power ? a : c
   const def = a.power >= c.power ? c : a
   const dmg = Math.max(4, Math.round((atk.power - def.power) * 0.2) + 3 + Math.floor(Math.random() * 6))
@@ -520,8 +531,20 @@ function resolveClash(a: Bey, c: Bey) {
   clashPair.value = { a: atk.key, b: def.key }
   sfx.trigger('clash', { enabled: sfxOn.value })
   setTimeout(() => (clashPair.value = null), 320)
-  if (def.hp <= 0) burstBey(def)
-  else {
+  if (def.hp <= 0) {
+    if (def.isHost) {
+      // Host is the permanent boss: it staggers (knockback + partial recovery)
+      // instead of bursting, so the arena never ends up without a host.
+      def.hp = Math.max(1, Math.round(def.maxHp * 0.35))
+      const dx = def.x - atk.x
+      const dy = def.y - atk.y
+      const d = Math.hypot(dx, dy) || 1
+      def.vx += (dx / d) * 70
+      def.vy += (dy / d) * 70
+      return
+    }
+    burstBey(def)
+  } else {
     const alive = beys.value.filter((x) => !x.burst)
     if (alive.length === 1) declareWinner(alive[0])
   }
@@ -533,14 +556,21 @@ function stepPhysics(dt: number) {
   if (active.length === 0) return
 
   for (const b of active) {
+    if (b.isHost) b.hp = Math.min(b.maxHp, b.hp + 6 * dt)
     const cx = 50 - b.x
     const cy = 50 - b.y
     const dist = Math.hypot(cx, cy) || 1
     // Inward pull keeps beys drifting toward the core like a real stadium;
     // stronger near the rim, weak near the center so they keep circling.
     const pull = b.isHost ? 8 : dist > 22 ? 18 : 2
-    const ax = (cx / dist) * pull + (Math.random() - 0.5) * 48
-    const ay = (cy / dist) * pull + (Math.random() - 0.5) * 48
+    // Consistent counter-clockwise bias keeps the whole field orbiting in one
+    // direction (a real beyblade stadium spins every top the same way) instead
+    // of jittering randomly in place.
+    const tx = -cy / dist
+    const ty = cx / dist
+    const orbit = b.isHost ? 5 : 6
+    const ax = (cx / dist) * pull + tx * orbit + (Math.random() - 0.5) * 24
+    const ay = (cy / dist) * pull + ty * orbit + (Math.random() - 0.5) * 24
     b.vx += ax * dt
     b.vy += ay * dt
     const sp = Math.hypot(b.vx, b.vy)
@@ -808,6 +838,7 @@ onBeforeUnmount(() => {
           <div class="bey-top" :style="{ '--spin-dur': spinDur(b) + 's' }">
             <div class="bey-rotor">
               <div class="bey-blade"></div>
+              <div class="bey-comet"></div>
             </div>
             <img class="bey-avatar" :src="b.avatarUrl" :alt="b.nickname" loading="lazy" />
             <div v-if="b.crown" class="bey-crown">👑</div>
@@ -818,6 +849,10 @@ onBeforeUnmount(() => {
           </div>
           <div class="bey-bar"><div class="bey-bar-fill" :style="{ width: hpPct(b) + '%' }"></div></div>
           <div class="bey-power">⚡ {{ fmtNum(b.power) }}</div>
+        </div>
+
+        <div v-for="s in sparks" :key="s.id" class="bey-spark" :style="{ left: s.x + '%', top: s.y + '%' }">
+          <span v-for="n in 6" :key="n" class="sp" :style="{ '--i': n }"></span>
         </div>
 
         <div v-if="beyWinner" class="bey-win">🏆 @{{ beyWinner }} menang!</div>
@@ -1150,6 +1185,10 @@ onBeforeUnmount(() => {
   inset: 6%;
   border-radius: 50%;
   border: 0.4cqw dashed oklch(70% 0.05 280 / 0.35);
+  animation: ringSpin 26s linear infinite;
+}
+@keyframes ringSpin {
+  to { transform: rotate(360deg); }
 }
 .stadium-core {
   position: absolute;
@@ -1221,6 +1260,11 @@ onBeforeUnmount(() => {
   align-items: center;
   z-index: 3;
   will-change: left, top;
+  animation: beyIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes beyIn {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.25); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 .bey.burst {
   animation: burstOut 0.9s ease-in forwards;
@@ -1251,20 +1295,61 @@ onBeforeUnmount(() => {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: repeating-conic-gradient(
-    oklch(88% 0.03 280) 0deg 16deg,
-    oklch(45% 0.07 280) 16deg 34deg,
-    oklch(78% 0.04 280) 34deg 44deg
-  );
-  box-shadow: inset 0 0 0.6cqw oklch(0% 0 0 / 0.55), 0 0 1.6cqw oklch(82% 0.15 195 / 0.35);
+  background:
+    radial-gradient(circle at 50% 50%, transparent 55%, oklch(20% 0.04 280) 55.5% 58%, transparent 58.5%),
+    repeating-conic-gradient(
+      oklch(92% 0.02 280) 0deg 10deg,
+      oklch(86% 0.03 280) 10deg 14deg,
+      oklch(30% 0.06 280) 14deg 24deg,
+      oklch(72% 0.05 280) 24deg 33deg,
+      oklch(18% 0.04 280) 33deg 45deg
+    );
+  box-shadow: inset 0 0 0.6cqw oklch(0% 0 0 / 0.6), 0 0 1.8cqw oklch(82% 0.15 195 / 0.4);
   filter: drop-shadow(0 0 1cqw oklch(82% 0.15 195 / 0.4));
 }
 .bey.host .bey-blade {
-  background: repeating-conic-gradient(
-    oklch(85% 0.16 90) 0deg 16deg,
-    oklch(55% 0.1 90) 16deg 34deg,
-    oklch(82% 0.15 195) 34deg 44deg
-  );
+  background:
+    radial-gradient(circle at 50% 50%, transparent 55%, oklch(30% 0.1 90) 55.5% 58%, transparent 58.5%),
+    repeating-conic-gradient(
+      oklch(85% 0.16 90) 0deg 10deg,
+      oklch(80% 0.14 90) 10deg 14deg,
+      oklch(45% 0.1 90) 14deg 24deg,
+      oklch(82% 0.15 195) 24deg 33deg,
+      oklch(25% 0.08 90) 33deg 45deg
+    );
+}
+.bey-comet {
+  position: absolute;
+  top: 1%;
+  left: 50%;
+  width: 1.4cqw;
+  height: 1.4cqw;
+  margin: 0 0 0 -0.7cqw;
+  border-radius: 50%;
+  background: oklch(85% 0.16 90);
+  box-shadow: 0 0 1.4cqw oklch(85% 0.16 90), 0 0 3cqw oklch(85% 0.16 90 / 0.5);
+}
+.bey-spark {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 6;
+}
+.bey-spark .sp {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1cqw;
+  height: 1cqw;
+  margin: -0.5cqw 0 0 -0.5cqw;
+  border-radius: 50%;
+  background: oklch(85% 0.16 90);
+  box-shadow: 0 0 1.2cqw oklch(85% 0.16 90);
+  animation: sparkOut 0.52s ease-out forwards;
+}
+@keyframes sparkOut {
+  from { transform: rotate(calc(var(--i) * 60deg)) translateY(0) scale(1); opacity: 1; }
+  to { transform: rotate(calc(var(--i) * 60deg)) translateY(-4.8cqw) scale(0.15); opacity: 0; }
 }
 .bey-avatar {
   position: absolute;
@@ -1358,6 +1443,10 @@ onBeforeUnmount(() => {
   background: oklch(10% 0.02 280 / 0.55);
   z-index: 10;
   text-align: center;
-  animation: pulse 0.6s ease-in-out infinite;
+  animation: winIn 0.35s ease-out, pulse 0.6s ease-in-out 0.35s infinite;
+}
+@keyframes winIn {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
 }
 </style>

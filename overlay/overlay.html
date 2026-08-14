@@ -630,6 +630,27 @@ li:first-child .rank { color: var(--color-gold); }
 }
 #status.on .dot { background: oklch(75% 0.18 150); }
 
+/* ============ LIVE VIEWER COUNT (top-left, mirrors status) ============ */
+#viewers {
+  position: absolute;
+  top: 1.2%;
+  left: 2.5vw;
+  font-family: var(--font-mono);
+  font-size: 1.8vw;
+  color: var(--color-ink-dim);
+  background: var(--color-panel);
+  border-radius: 999px;
+  padding: 0.5vw 1.5vw;
+  display: flex;
+  align-items: center;
+  gap: 0.8vw;
+  opacity: 0;
+  transition: opacity 400ms;
+}
+#viewers.on { opacity: 0.85; }
+#viewers .eye { font-size: 1.6vw; }
+#viewer-num { color: var(--color-ink); font-weight: 700; }
+
 /* setup screen (shown only when params missing) */
 #setup {
   position: fixed;
@@ -750,6 +771,7 @@ li:first-child .rank { color: var(--color-gold); }
   </div>
 
   <div id="status"><span class="dot"></span><span id="status-text">connecting…</span></div>
+  <div id="viewers"><span class="eye">👀</span><span id="viewer-num">0</span><span>penonton</span></div>
 </div>
 
 <script>
@@ -1263,6 +1285,8 @@ li:first-child .rank { color: var(--color-gold); }
   // ---------- websocket ----------
   const statusEl = document.getElementById('status');
   const statusText = document.getElementById('status-text');
+  const viewersEl = document.getElementById('viewers');
+  const viewerNum = document.getElementById('viewer-num');
   let ws, retry = 0;
 
   function handleMessage(evt) {
@@ -1287,6 +1311,14 @@ li:first-child .rank { color: var(--color-gold); }
       case 'member':
         onMember(user);
         break;
+      case 'roomUserSeq': {
+        const vc = Number(d.viewerCount) || 0;
+        if (vc > 0) {
+          viewerNum.textContent = vc.toLocaleString('id-ID');
+          viewersEl.classList.add('on');
+        }
+        break;
+      }
       case 'chat':
         onChat(user, d.comment);
         break;
