@@ -4,9 +4,13 @@ import { uid, normalizeUser, fallbackAvatar } from '~/utils/stream'
 
 export type StreamMode = 'idle' | 'live' | 'demo'
 
+// Hardcoded tiktool API key — dipakai otomatis kalau config/URL tidak bawa key.
+// Ganti di sini saja kalau key berubah.
+export const TIKTOOL_API_KEY = 'tk_c47bc5f4a5ef48c8394d4febc6ab63c9a0f23917eb85c5f3'
+
 // Module-scoped singleton: every widget and panel shares one live feed.
 const username = ref('')
-const apiKey = ref('')
+const apiKey = ref(TIKTOOL_API_KEY)
 const mode = ref<StreamMode>('idle')
 const connected = ref(false)
 const error = ref<string | null>(null)
@@ -156,7 +160,7 @@ function connect(u?: string, key?: string) {
   if (key !== undefined) apiKey.value = key
 
   const cleanId = username.value.trim().replace(/^@/, '')
-  const k = apiKey.value.trim()
+  const k = apiKey.value.trim() || TIKTOOL_API_KEY
   if (!cleanId) {
     error.value = 'Masukkan username TikTok.'
     return

@@ -41,11 +41,11 @@ const isDemo = computed(() => mode.value === 'demo')
             <input v-model="username" type="text" placeholder="e.g. aljazeeraenglish" />
           </div>
           <div class="field">
-            <label>API Key</label>
-            <input v-model="apiKey" type="text" placeholder="api key dari tik.tools" />
+            <label>API Key <span class="dim" style="font-weight: 400; text-transform: none">(sudah terisi otomatis)</span></label>
+            <input v-model="apiKey" type="text" placeholder="tk_…" />
             <span style="font-size: 0.75rem; color: var(--ink-faint)">
-              Dapatkan key gratis di
-              <a href="https://tik.tools" target="_blank" class="accent2">tik.tools</a>. Kosongkan untuk mode demo.
+              Key default sudah tertanam — cukup isi username di atas lalu klik Hubungkan. Dapatkan key baru di
+              <a href="https://tik.tools" target="_blank" class="accent2">tik.tools</a> bila perlu.
             </span>
           </div>
 

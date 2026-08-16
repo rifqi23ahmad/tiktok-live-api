@@ -2,8 +2,8 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useTikTokStream } from '~/composables/useTikTokStream'
 import { useSfx } from '~/composables/useSfx'
-import { hashStr, fmtNum, fallbackAvatar } from '~/utils/stream'
-import { hostGreet, hostAnswer } from '~/utils/ai'
+import { hashStr, fmtNum, fallbackAvatar, EMOJI_RE } from '~/utils/stream'
+import { createHostSessionId, hostGreet, hostAnswer, type HostChatResult } from '~/utils/ai'
 import { speak, ttsSupported } from '~/utils/tts'
 
 const props = defineProps<{ settings: Record<string, any> }>()
@@ -14,6 +14,8 @@ const sfx = useSfx()
 const sfxOn = computed(() => props.settings.sfx !== false)
 const ttsOn = computed(() => props.settings.tts !== false && ttsSupported())
 const aiVoice = computed(() => (typeof props.settings.aiVoice === 'string' && props.settings.aiVoice) || 'id-ID')
+const commentTtsOn = computed(() => props.settings.commentTts !== false && ttsSupported())
+const commentVoice = computed(() => (typeof props.settings.commentVoice === 'string' && props.settings.commentVoice) || 'id-ID')
 
 const mode = computed<'beyblade' | 'arena' | 'marble' | 'war'>(() => {
   const m = props.settings.mode
@@ -129,6 +131,28 @@ function onFollow(f: { id: string; user: string; nickname: string; avatarUrl: st
   clearTimers(c.key)
   charTimers.set(c.key, setTimeout(() => patchChar(c.key, { followBadge: false }), 4200))
 }
+
+// ----- comment TTS: read incoming viewer comments aloud for the host -----
+
+function speakable(text: string): string {
+  return (text || '').replace(EMOJI_RE, '').replace(/\s+/g, ' ').trim()
+}
+
+function speakComment(m: { id: string; user: string; nickname: string; avatarUrl: string; comment: string }) {
+  if (!commentTtsOn.value) return
+  const body = speakable(m.comment)
+  if (!body) return
+  const who = speakable(m.nickname || m.user)
+  const line = who ? `${who}: ${body}` : body
+  speak(line, { lang: commentVoice.value })
+}
+
+watch(
+  () => stream.messages.value[0],
+  (m) => {
+    if (m) speakComment(m)
+  }
+)
 
 watch(() => stream.members.value[0], onMember)
 watch(() => stream.messages.value[0], onChat)
@@ -249,10 +273,10 @@ const pctA = computed(() => (warTotal.value > 0 ? (warTeams.value.a / warTotal.v
 
 // ---------------------------------------------------------------------------
 // Beyblade Arena: viewer avatars spin like beyblades and clash in a stadium.
-// Beys physically orbit and drift around the arena (velocity + wall bounce +
-// collision), so they actually move around — not just spin in place. Gift &
-// like feed power (damage). Chat renders on the spinning top. The host is a
-// permanent player with higher base damage, and greets/answers viewers via AI.
+// Idle beys spin calmly in place (barely move). A like sends the bey hunting
+// the nearest target to clash — likes also heal (nyawa), while gifts feed
+// power (damage). Chat renders on the spinning top. The host is a permanent
+// player with higher base damage, and greets/answers viewers via AI.
 // ---------------------------------------------------------------------------
 
 interface Bey {
@@ -273,14 +297,19 @@ interface Bey {
   vx: number
   vy: number
   lastClash: number
+  // like-driven aggression: while aggroUntil is in the future the bey seeks a
+  // target and clashes; otherwise it spins calmly in place (barely moves).
+  aggroUntil: number
+  target: string | null
 }
 
 const BEY_MAX = 10
-const HOST_POWER = 30
-const VIEWER_POWER = 10
-const HOST_HP = 160
+const HOST_POWER = 20
+const HOST_HP = 100
 const VIEWER_HP = 100
-const POWER_CAP = 500
+const POWER_CAP = 300      // max power — pure like accumulation is the only source
+const CLASH_DMG_MIN = 8
+const CLASH_DMG_MAX = 30   // no one-shot kills: strongest clash still needs 4 hits
 const RIM = 38             // stadium radius (%), beys bounce off this rim
 const BEY_RADIUS = 13      // collision distance (%)
 const CLASH_COOLDOWN = 900 // ms between clashes for a given bey
@@ -292,14 +321,16 @@ const sparks = ref<Array<{ id: number; x: number; y: number }>>([])
 let sparkSeq = 0
 const hostSay = ref<string | null>(null)
 const hostThinking = ref(false)
+const hostNotice = ref<string | null>(null)
 const beyCommentTimers = new Map<string, ReturnType<typeof setTimeout>>()
 let physicsRaf: number | null = null
 let lastFrame = 0
 let lastHostSayAt = 0
 let hostSayTimer: ReturnType<typeof setTimeout> | null = null
+const hostSessionId = createHostSessionId()
 
 const aiEnabled = computed(() => props.settings.ai !== false)
-const aiConfig = computed(() => ({ model: props.settings.aiModel }))
+const aiConfig = computed(() => ({ model: props.settings.aiModel, sessionId: hostSessionId }))
 
 function hostName() {
   return stream.username.value.trim().replace(/^@/, '') || 'HOST'
@@ -321,9 +352,11 @@ function hostBey(): Bey {
     crown: true,
     x: 50,
     y: 26,
-    vx: 15,
+    vx: 4,
     vy: 0,
-    lastClash: 0
+    lastClash: 0,
+    aggroUntil: 0,
+    target: null
   }
 }
 
@@ -333,14 +366,14 @@ function initBeys() {
   clearHostSay()
 }
 
-// Launch a new viewer on a ring with tangential velocity so beys orbit the
-// arena like a real beyblade, instead of sitting still at a fixed angle.
+// Launch a new viewer on a ring with only a gentle drift, so it spins calmly
+// in place until a like sends it hunting for a target.
 function spawnViewer(b: Bey, i: number, n: number) {
   const angle = (Math.PI * 2 * i) / n + Math.random() * 0.6
   const r = 20 + Math.random() * 14
   b.x = 50 + Math.cos(angle) * r
   b.y = 50 + Math.sin(angle) * r
-  const speed = 20 + Math.random() * 12
+  const speed = 4 + Math.random() * 6
   b.vx = -Math.sin(angle) * speed
   b.vy = Math.cos(angle) * speed
 }
@@ -358,7 +391,7 @@ function ensureBey(user: string, nickname: string, avatarUrl: string): Bey {
     user,
     nickname: nickname || user || 'anon',
     avatarUrl: avatarUrl || fallbackAvatar(user || 'anon'),
-    power: VIEWER_POWER,
+    power: 0,
     hp: VIEWER_HP,
     maxHp: VIEWER_HP,
     isHost: false,
@@ -369,7 +402,9 @@ function ensureBey(user: string, nickname: string, avatarUrl: string): Bey {
     y: 50,
     vx: 0,
     vy: 0,
-    lastClash: 0
+    lastClash: 0,
+    aggroUntil: 0,
+    target: null
   }
   const viewers = beys.value.filter((x) => !x.isHost)
   spawnViewer(b, viewers.length, viewers.length + 1)
@@ -413,18 +448,31 @@ function setBeyComment(b: Bey, text: string) {
 function clearHostSay() {
   hostSay.value = null
   hostThinking.value = false
+  hostNotice.value = null
   if (hostSayTimer) {
     clearTimeout(hostSayTimer)
     hostSayTimer = null
   }
 }
 
-function speakHost(text: string, hold = 6000) {
+function showHostMessage(text: string | null, notice: string | null, hold = 6000) {
   hostSay.value = text
+  hostNotice.value = notice
   hostThinking.value = false
-  if (ttsOn.value) speak(text, { lang: aiVoice.value })
+  if (text && ttsOn.value) speak(text, { lang: aiVoice.value })
   if (hostSayTimer) clearTimeout(hostSayTimer)
-  hostSayTimer = setTimeout(() => (hostSay.value = null), hold)
+  hostSayTimer = setTimeout(() => {
+    hostSay.value = null
+    hostNotice.value = null
+  }, hold)
+}
+
+function handleHostResult(result: HostChatResult) {
+  if (result.text && (result.status === 'ok' || result.status === 'fallback')) {
+    showHostMessage(result.text, result.status === 'fallback' ? result.message : null)
+    return
+  }
+  showHostMessage(null, result.message, 5000)
 }
 
 function maybeHostGreet(viewer: string) {
@@ -433,10 +481,7 @@ function maybeHostGreet(viewer: string) {
   if (now - lastHostSayAt < 2000) return
   lastHostSayAt = now
   hostThinking.value = true
-  hostGreet(aiConfig.value, hostName(), viewer).then((text) => {
-    if (text) speakHost(text)
-    else hostThinking.value = false
-  })
+  hostGreet(aiConfig.value, hostName(), viewer).then(handleHostResult)
 }
 
 function maybeHostAnswer(viewer: string, comment: string) {
@@ -447,10 +492,7 @@ function maybeHostAnswer(viewer: string, comment: string) {
   if (now - lastHostSayAt < 6000) return
   lastHostSayAt = now
   hostThinking.value = true
-  hostAnswer(aiConfig.value, hostName(), viewer, clean).then((text) => {
-    if (text) speakHost(text)
-    else hostThinking.value = false
-  })
+  hostAnswer(aiConfig.value, hostName(), viewer, clean).then(handleHostResult)
 }
 
 function onBeyMember(m: { id: string; user: string; nickname: string; avatarUrl: string }) {
@@ -469,9 +511,12 @@ function onBeyChat(m: { id: string; user: string; nickname: string; avatarUrl: s
 
 function onBeyLike(l: { id: string; user: string; nickname: string; avatarUrl: string; likeCount: number }) {
   const b = ensureBey(l.user, l.nickname, l.avatarUrl)
+  // Power is driven PURELY by likes — "kenceng-kencengan like". Likes charge
+  // attack power only; attacking spends it. HP only recovers via gifts.
   const boost = Math.min(20, l.likeCount || 1)
   b.power = Math.min(POWER_CAP, b.power + boost)
-  b.hp = Math.min(b.maxHp, b.hp + boost)
+  b.aggroUntil = Date.now() + 1600 + boost * 200
+  if (!b.isHost) assignTarget(b)
   sfx.trigger('reaction', { enabled: sfxOn.value })
 }
 
@@ -479,8 +524,10 @@ function onBeyGift(g: { id: string; user: string; nickname: string; avatarUrl: s
   const b = ensureBey(g.user, g.nickname, g.avatarUrl)
   const d = g.diamondCount || 1
   const big = d >= 100
-  b.power = Math.min(POWER_CAP, b.power + d)
-  b.hp = Math.min(b.maxHp, b.hp + Math.floor(d * 0.6))
+  // Gifts restore HP and trigger the crown celebration, but they do NOT add
+  // power — only likes do. This keeps big spenders strong without making them
+  // one-shot everyone; everyone can win by tapping like hard.
+  b.hp = Math.min(b.maxHp, b.hp + Math.min(60, Math.floor(d * 0.8)))
   b.crown = b.crown || big
   sfx.trigger(big ? 'gift-big' : 'gift', { enabled: sfxOn.value })
   const prev = beyCommentTimers.get(b.key + ':crown')
@@ -490,7 +537,8 @@ function onBeyGift(g: { id: string; user: string; nickname: string; avatarUrl: s
 
 function onBeyFollow(f: { id: string; user: string; nickname: string; avatarUrl: string }) {
   const b = ensureBey(f.user, f.nickname, f.avatarUrl)
-  b.power = Math.min(POWER_CAP, b.power + 5)
+  // Follow heals a bit, but does not add power — power is like-driven only.
+  b.hp = Math.min(b.maxHp, b.hp + 15)
   sfx.trigger('follow', { enabled: sfxOn.value })
 }
 
@@ -514,6 +562,34 @@ function declareWinner(b: Bey) {
 
 // ----- physics -----
 
+// A bey is "aggressive" only while a like recently hit it (viewers only; the
+// host stays calm). Aggressive beys chase a target and clash; idle beys just
+// spin in place.
+function isAggro(b: Bey, now: number) {
+  return !b.isHost && now < b.aggroUntil
+}
+
+// Pick the nearest alive opponent as the hunt target.
+function assignTarget(b: Bey) {
+  const candidates = beys.value.filter((x) => x !== b && !x.burst)
+  if (!candidates.length) {
+    b.target = null
+    return
+  }
+  let best = candidates[0]
+  let bd = Infinity
+  for (const c of candidates) {
+    const dx = c.x - b.x
+    const dy = c.y - b.y
+    const d = dx * dx + dy * dy
+    if (d < bd) {
+      bd = d
+      best = c
+    }
+  }
+  b.target = best.key
+}
+
 function spawnSpark(x: number, y: number) {
   const id = ++sparkSeq
   sparks.value = [...sparks.value, { id, x, y }]
@@ -526,8 +602,17 @@ function resolveClash(a: Bey, c: Bey) {
   spawnSpark((a.x + c.x) / 2, (a.y + c.y) / 2)
   const atk = a.power >= c.power ? a : c
   const def = a.power >= c.power ? c : a
-  const dmg = Math.max(4, Math.round((atk.power - def.power) * 0.2) + 3 + Math.floor(Math.random() * 6))
+  // Damage scales with the power gap but is clamped — the strongest like-lord
+  // still needs multiple clashes to burst someone (no one-shot kills).
+  const dmg = Math.min(
+    CLASH_DMG_MAX,
+    Math.max(CLASH_DMG_MIN, CLASH_DMG_MIN + Math.round((atk.power - def.power) * 0.12) + Math.floor(Math.random() * 6))
+  )
   def.hp = Math.max(0, def.hp - dmg)
+  // Attacking spends like power: the attacker loses power equal to the damage
+  // dealt. A like-hoarder is strong for only a few hits, then must re-charge
+  // by tapping again — so power goes up and down with likes and attacks.
+  atk.power = Math.max(0, atk.power - dmg)
   clashPair.value = { a: atk.key, b: def.key }
   sfx.trigger('clash', { enabled: sfxOn.value })
   setTimeout(() => (clashPair.value = null), 320)
@@ -555,26 +640,47 @@ function stepPhysics(dt: number) {
   const active = beys.value.filter((b) => !b.burst)
   if (active.length === 0) return
 
+  const now = Date.now()
+
   for (const b of active) {
-    if (b.isHost) b.hp = Math.min(b.maxHp, b.hp + 6 * dt)
-    const cx = 50 - b.x
-    const cy = 50 - b.y
-    const dist = Math.hypot(cx, cy) || 1
-    // Inward pull keeps beys drifting toward the core like a real stadium;
-    // stronger near the rim, weak near the center so they keep circling.
-    const pull = b.isHost ? 8 : dist > 22 ? 18 : 2
-    // Consistent counter-clockwise bias keeps the whole field orbiting in one
-    // direction (a real beyblade stadium spins every top the same way) instead
-    // of jittering randomly in place.
-    const tx = -cy / dist
-    const ty = cx / dist
-    const orbit = b.isHost ? 5 : 6
-    const ax = (cx / dist) * pull + tx * orbit + (Math.random() - 0.5) * 24
-    const ay = (cy / dist) * pull + ty * orbit + (Math.random() - 0.5) * 24
+    if (b.isHost) b.hp = Math.min(b.maxHp, b.hp + 2 * dt)
+
+    let ax = 0
+    let ay = 0
+    const aggressive = isAggro(b, now)
+
+    if (aggressive) {
+      // Hunt the assigned target — steer straight at it. More power = faster
+      // chase, so stacked likes send the bey flying into clashes.
+      const t = b.target ? beys.value.find((x) => x.key === b.target && !x.burst) : null
+      if (t) {
+        const dx = t.x - b.x
+        const dy = t.y - b.y
+        const d = Math.hypot(dx, dy) || 1
+        const seek = 60 + Math.min(90, b.power * 0.25)
+        ax = (dx / d) * seek
+        ay = (dy / d) * seek
+      } else {
+        assignTarget(b)
+        if (!b.target) {
+          ax = (Math.random() - 0.5) * 6
+          ay = (Math.random() - 0.5) * 6
+        }
+      }
+    } else {
+      // Idle: spin calmly in place — gentle random drift with strong damping so
+      // it doesn't wander around or clash on its own.
+      ax = (Math.random() - 0.5) * 6
+      ay = (Math.random() - 0.5) * 6
+      b.vx *= Math.max(0, 1 - 1.8 * dt)
+      b.vy *= Math.max(0, 1 - 1.8 * dt)
+    }
+
     b.vx += ax * dt
     b.vy += ay * dt
+
     const sp = Math.hypot(b.vx, b.vy)
-    const maxSp = b.isHost ? 18 : 26 + Math.min(22, b.power * 0.04)
+    const maxSp = aggressive ? 38 + Math.min(34, b.power * 0.06) : 9
     if (sp > maxSp) {
       const k = maxSp / sp
       b.vx *= k
@@ -598,8 +704,7 @@ function stepPhysics(dt: number) {
     }
   }
 
-  // pairwise collision → clash
-  const now = Date.now()
+  // pairwise collision → clash (only when at least one bey is aggressive)
   for (let i = 0; i < active.length; i++) {
     for (let j = i + 1; j < active.length; j++) {
       const a = active[i]
@@ -621,7 +726,8 @@ function stepPhysics(dt: number) {
         a.vy += (dotC - dotA) * ny
         c.vx += (dotA - dotC) * nx
         c.vy += (dotA - dotC) * ny
-        if (now - a.lastClash > CLASH_COOLDOWN && now - c.lastClash > CLASH_COOLDOWN) {
+        const wantClash = isAggro(a, now) || isAggro(c, now)
+        if (wantClash && now - a.lastClash > CLASH_COOLDOWN && now - c.lastClash > CLASH_COOLDOWN) {
           a.lastClash = now
           c.lastClash = now
           resolveClash(a, c)
@@ -815,7 +921,7 @@ onBeforeUnmount(() => {
     <div v-else class="beyblade">
       <div class="mg-head">
         <span class="mg-title">🌀 Beyblade Arena</span>
-        <span class="mg-hint">gift / like = tambah kekuatan</span>
+        <span class="mg-hint">like = kekuatan + adu · gift = nyawa</span>
       </div>
 
       <div class="stadium" :class="{ shake: clashPair }">

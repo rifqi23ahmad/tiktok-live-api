@@ -89,7 +89,7 @@ export const widgetDefs: WidgetDef[] = [
     description: 'Penonton jadi beyblade yang beradu di arena. Gift/like tambah kekuatan, komentar tampil di beyblade, host ikut main, sapa penonton pakai AI & jawab pakai suara (TTS). Plus Audience Arena, Avatar Race & Avatar War.',
     defaultW: 88,
     defaultH: 48,
-    defaultProps: { mode: 'beyblade' as 'beyblade' | 'arena' | 'marble' | 'war', ai: true, aiModel: '', tts: true, aiVoice: 'id-ID' }
+    defaultProps: { mode: 'beyblade' as 'beyblade' | 'arena' | 'marble' | 'war', ai: true, aiModel: '', tts: true, aiVoice: 'id-ID', commentTts: true, commentVoice: 'id-ID' }
   },
   {
     type: 'team-battle',

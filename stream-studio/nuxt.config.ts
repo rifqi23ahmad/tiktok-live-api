@@ -7,6 +7,14 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  // Allow access through a tunnel host (trycloudflare.com / ngrok) in dev.
+  // Without this, Vite's host allowlist rejects tunnel requests with 403.
+  vite: {
+    server: {
+      allowedHosts: true
+    }
+  },
+
   app: {
     head: {
       title: 'Stream Studio — No-Code Overlay Builder',
@@ -32,10 +40,9 @@ export default defineNuxtConfig({
 
   // AI host (Tarogo) — server-side only. The key must never reach the client
   // bundle or the published overlay URL. It is resolved at request time from
-  // TAROGO_API_KEY (or the NUXT_TAROGO_API_KEY runtime-config override); we
-  // deliberately keep the default empty so no secret is baked into the build.
+  // TAROGO_API_KEY (or the NUXT_TAROGO_API_KEY runtime-config override).
   runtimeConfig: {
-    tarogoApiKey: '',
+    tarogoApiKey: process.env.TAROGO_API_KEY || '',
     tarogoEndpoint: process.env.TAROGO_API_ENDPOINT || 'https://api.tarogo.ai/chat/completions',
     public: {}
   }

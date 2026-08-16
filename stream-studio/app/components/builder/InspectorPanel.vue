@@ -178,6 +178,22 @@ function setOption(idx: number, val: string) {
               <option value="ar-SA">العربية</option>
             </select>
           </label>
+          <label class="mini-field check">
+            <input type="checkbox" :checked="inst.props.commentTts !== false" @change="setProp('commentTts', ($event.target as HTMLInputElement).checked)" />
+            🗣️ Baca komentar penonton (text-to-speech)
+          </label>
+          <label class="mini-field">Bahasa komentar
+            <select :value="inst.props.commentVoice || 'id-ID'" @change="setProp('commentVoice', ($event.target as HTMLSelectElement).value)">
+              <option value="id-ID">Indonesia</option>
+              <option value="en-US">English (US)</option>
+              <option value="en-GB">English (UK)</option>
+              <option value="ms-MY">Melayu</option>
+              <option value="ja-JP">日本語</option>
+              <option value="ko-KR">한국어</option>
+              <option value="ar-SA">العربية</option>
+            </select>
+          </label>
+          <p class="mini-hint">Komentar masuk dibacakan untuk host; komentar baru menggantikan ucapan sebelumnya.</p>
         </template>
 
         <template v-else-if="inst.type === 'team-battle'">

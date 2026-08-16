@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useStudio } from '~/composables/useStudio'
-import { useTikTokStream } from '~/composables/useTikTokStream'
+import { useTikTokStream, TIKTOOL_API_KEY } from '~/composables/useTikTokStream'
 import { useSfx } from '~/composables/useSfx'
 import { encodeOverlayConfig } from '~/utils/overlay'
 
@@ -28,7 +28,7 @@ let copyTimer: ReturnType<typeof setTimeout> | null = null
 
 const publishUrl = computed(() => {
   const cleanId = stream.username.value.trim().replace(/^@/, '')
-  const key = stream.apiKey.value.trim()
+  const key = stream.apiKey.value.trim() || TIKTOOL_API_KEY
   const hasCreds = !!cleanId && !!key && key !== 'demo'
   const config = {
     username: cleanId,

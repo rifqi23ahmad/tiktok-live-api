@@ -6,7 +6,8 @@
 // from server config — the secret never reaches the client bundle or the
 // published overlay URL.
 //
-// Credentials come from env (see .env.example / nuxt.config.ts runtimeConfig):
+// Credentials come from nuxt.config.ts runtimeConfig (kept empty by default),
+// or from TAROGO_API_KEY directly as a runtime fallback:
 //   TAROGO_API_KEY      — Bearer token for api.tarogo.ai
 //   TAROGO_API_ENDPOINT — optional override of the chat-completions endpoint
 
@@ -15,10 +16,15 @@ export default defineEventHandler(async (event) => {
   const messages = Array.isArray(body?.messages) ? body.messages : []
   if (messages.length === 0) return { text: null }
 
-  const model = (body?.model && String(body.model).trim()) || 'deepseek-v4-flash@deepseek'
+  let model = (body?.model && String(body.model).trim()) || 'deepseek-v4-flash@deepseek'
+  // Guard against old overlays that sent the API key in the model field.
+  if (/^sk[-_]ai[-_]/i.test(model)) model = 'deepseek-v4-flash@deepseek'
 
   const config = useRuntimeConfig()
-  const apiKey = (config.tarogoApiKey as string) || process.env.TAROGO_API_KEY || ''
+  const apiKey =
+    (config.tarogoApiKey as string) ||
+    process.env.TAROGO_API_KEY ||
+    ''
   const endpoint =
     (config.tarogoEndpoint as string) ||
     process.env.TAROGO_API_ENDPOINT ||

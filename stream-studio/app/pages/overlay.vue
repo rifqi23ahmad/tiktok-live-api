@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useTikTokStream } from '~/composables/useTikTokStream'
+import { useTikTokStream, TIKTOOL_API_KEY } from '~/composables/useTikTokStream'
 import type { WidgetType } from '~/composables/useWidgetRegistry'
 import { decodeOverlayConfig, type OverlayConfig, type OverlayWidget } from '~/utils/overlay'
 import WidgetRenderer from '~/components/builder/WidgetRenderer.vue'
@@ -31,9 +31,11 @@ onMounted(() => {
 
   const c = cfg.value
   if (c.username) stream.username.value = c.username
+  // Pakai key hardcoded kalau config tidak bawa key — overlay tinggal butuh username.
   if (c.apiKey) stream.apiKey.value = c.apiKey
+  else stream.apiKey.value = TIKTOOL_API_KEY
 
-  const hasCreds = !!c.username && !!c.apiKey && c.apiKey !== 'demo'
+  const hasCreds = !!c.username && !!stream.apiKey.value && stream.apiKey.value !== 'demo'
   if (c.demo === true || !hasCreds) stream.startDemo()
   else stream.connect()
 })
