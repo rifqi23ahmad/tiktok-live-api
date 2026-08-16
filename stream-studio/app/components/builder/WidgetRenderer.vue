@@ -11,6 +11,7 @@ import AvatarArena from '~/components/widgets/AvatarArena.vue'
 import TeamBattle from '~/components/widgets/TeamBattle.vue'
 import LoyaltyPoints from '~/components/widgets/LoyaltyPoints.vue'
 import LuckyWheel from '~/components/widgets/LuckyWheel.vue'
+import PanjatPinang from '~/components/widgets/PanjatPinang.vue'
 
 const props = defineProps<{ type: WidgetType; settings: Record<string, any> }>()
 
@@ -24,7 +25,8 @@ const map: Record<WidgetType, any> = {
   'avatar-arena': AvatarArena,
   'team-battle': TeamBattle,
   'loyalty-points': LoyaltyPoints,
-  'lucky-wheel': LuckyWheel
+  'lucky-wheel': LuckyWheel,
+  'panjat-pinang': PanjatPinang
 }
 
 const comp = computed(() => map[props.type])

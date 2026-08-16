@@ -11,6 +11,7 @@ export type WidgetType =
   | 'team-battle'
   | 'loyalty-points'
   | 'lucky-wheel'
+  | 'panjat-pinang'
 
 export interface WidgetDef {
   type: WidgetType
@@ -128,6 +129,15 @@ export const widgetDefs: WidgetDef[] = [
       threshold: 1000,
       segments: ['💎 x2', '🎁 10 💎', '🔥 Shoutout', '⭐ 50 💎', '💔 Zonk', '🏆 100 💎']
     }
+  },
+  {
+    type: 'panjat-pinang',
+    name: 'Panjat Pinang (17an)',
+    icon: '🇮🇩',
+    description: 'Spesial 17 Agustusan: penonton jadi pendaki berkepala foto profil TikTok yang memanjat tiang pinang berminyak. Like = naik, gift = lompat.',
+    defaultW: 60,
+    defaultH: 62,
+    defaultProps: {}
   }
 ]
 
